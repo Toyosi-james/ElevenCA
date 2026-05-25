@@ -1,3 +1,8 @@
+/**
+ * Fund Gas Fee — QR code + copy for gas-fee funding address.
+ * API: GET /wallet/gas-fee-address (fetchFundGasFeeAddress).
+ */
+
 import React, { useCallback, useEffect, useState } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import { useNavigate } from 'react-router-dom'
@@ -56,6 +61,7 @@ export default function FundGasFee() {
     const ac = new AbortController()
     const run = async () => {
       try {
+        // API: GET /auth/me
         const u = await fetchSessionUser(ac.signal)
         if (!ac.signal.aborted) setUser(u)
       } catch {
@@ -64,7 +70,7 @@ export default function FundGasFee() {
       }
 
       try {
-        // Dedicated gas-fee endpoint with fallback to deposit wallet.
+        // API: GET /wallet/gas-fee-address
         const d = await fetchFundGasFeeAddress(ac.signal)
         if (!ac.signal.aborted) setPayload(d)
       } catch {

@@ -1,3 +1,8 @@
+/**
+ * Profile screen — shows account fields (name, email, address, etc.).
+ * API: GET profile detail (default same path as /auth/me) via fetchProfileDetail().
+ */
+
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import HomeFooter from '../components/home/HomeFooter.jsx'
@@ -57,6 +62,7 @@ export default function Profile() {
     const ac = new AbortController()
     const run = async () => {
       try {
+        // API: GET profile (default /auth/me, or VITE_PROFILE_DETAIL_PATH)
         const { profile: p } = await fetchProfileDetail(ac.signal)
         if (!ac.signal.aborted) setProfile(p)
       } finally {

@@ -1,3 +1,12 @@
+/**
+ * Transaction history API (read-only, paginated).
+ *
+ * API: GET `{base}{VITE_TRANSACTIONS_PATH}?page=1&limit=10`
+ *      Default path: /wallet/transactions
+ * Screen: Home.jsx → TransactionHistory component
+ * Falls back to demo transactions if GET fails.
+ */
+
 import { getTransactionsPath } from '../config.js'
 import { apiGet } from './client.js'
 
@@ -286,6 +295,7 @@ export async function fetchTransactions(signal, params = {}) {
   })
 
   try {
+    // HTTP: GET /wallet/transactions?page=&limit=
     const json = await apiGet(`${pathBase}?${qs.toString()}`, { signal })
     const { list, meta } = extractListAndMeta(json)
     if (!Array.isArray(list)) {

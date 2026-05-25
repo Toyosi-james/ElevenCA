@@ -1,3 +1,8 @@
+/**
+ * Login screen — collects username, asset PIN, and password.
+ * API: POST /auth/login via signIn() → persistAuthPayload() → redirect to /home
+ */
+
 import React, { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { signIn } from '../lib/api/auth.js'
@@ -147,12 +152,14 @@ const Login = () => {
 
     setLoading(true)
     try {
+      // API: POST /auth/login — body: { assetPin, username, password }
       const data = await signIn({
         assetPin: trimmedPin,
         username: trimmedUser,
         password,
         signal: ac.signal,
       })
+      // Save tokens/user from login response (no extra API call here)
       persistAuthPayload(data, { username: trimmedUser })
       navigate(getPostLoginRedirect(), { replace: true })
     } catch (err) {

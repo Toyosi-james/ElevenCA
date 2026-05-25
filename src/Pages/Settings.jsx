@@ -1,3 +1,8 @@
+/**
+ * Settings menu — links to update PIN / password screens.
+ * API: GET /auth/me for header only. Save endpoints not wired in this app yet.
+ */
+
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import HomeFooter from '../components/home/HomeFooter.jsx'
@@ -14,6 +19,7 @@ export default function Settings() {
     const ac = new AbortController()
     ;(async () => {
       try {
+        // API: GET /auth/me
         const u = await fetchSessionUser(ac.signal)
         if (!ac.signal.aborted) setUser(u)
       } catch {

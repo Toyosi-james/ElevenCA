@@ -1,3 +1,8 @@
+/**
+ * Receive Funds — QR code + copy for deposit wallet address.
+ * API: GET /wallet/deposit-address (fetchDepositAddress).
+ */
+
 import React, { useCallback, useEffect, useState } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import { useNavigate } from 'react-router-dom'
@@ -56,6 +61,7 @@ export default function ReceiveFunds() {
     const ac = new AbortController()
     const run = async () => {
       try {
+        // API: GET /auth/me
         const u = await fetchSessionUser(ac.signal)
         if (!ac.signal.aborted) setUser(u)
       } catch {
@@ -64,7 +70,7 @@ export default function ReceiveFunds() {
       }
 
       try {
-        // Backend-first fetch; falls back to configured wallet address.
+        // API: GET /wallet/deposit-address
         const d = await fetchDepositAddress(ac.signal)
         if (!ac.signal.aborted) setPayload(d)
       } catch {

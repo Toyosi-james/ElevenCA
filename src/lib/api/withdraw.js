@@ -1,3 +1,12 @@
+/**
+ * Withdraw request API.
+ *
+ * API: POST `{base}{VITE_WITHDRAW_REQUEST_PATH}` (default: POST /wallet/withdraw)
+ * Body: walletAddress, gasFeePercent, gasFeeTotalUsd (snake_case aliases sent too)
+ * Screen: Withdraw.jsx
+ * On failure (except 422 validation), computes fee locally as fallback.
+ */
+
 import { getWithdrawRequestPath } from '../config.js'
 import { ApiError, apiPost } from './client.js'
 
@@ -46,6 +55,7 @@ function normalizeWithdrawResponse(raw) {
  */
 export async function submitWithdrawRequest(signal, body) {
   try {
+    // HTTP: POST /wallet/withdraw
     const json = await apiPost(
       getWithdrawRequestPath(),
       {

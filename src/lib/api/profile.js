@@ -1,3 +1,11 @@
+/**
+ * Profile detail API (account screen fields).
+ *
+ * API: GET `{base}{VITE_PROFILE_DETAIL_PATH}` (defaults to same as /auth/me)
+ * Screen: Profile.jsx
+ * Empty fields can be filled from PROFILE_MOCK_DATA for demos.
+ */
+
 import { getProfileDetailPath, getProfileUseMockOnly } from '../config.js'
 import { getUserSnapshot } from '../session.js'
 import { apiGet } from './client.js'
@@ -189,6 +197,7 @@ export async function fetchProfileDetail(signal) {
   }
 
   try {
+    // HTTP: GET profile detail (default /auth/me, path from getProfileDetailPath)
     const json = await apiGet(getProfileDetailPath(), { signal })
     const n = normalizeProfileDetail(unwrapData(json))
     merged = {

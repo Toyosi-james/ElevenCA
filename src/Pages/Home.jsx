@@ -1,3 +1,12 @@
+/**
+ * Main dashboard after login.
+ * APIs on load:
+ *   GET /auth/me          — user name in header
+ *   GET /wallet/summary   — balance card
+ *   GET /markets/flow     — BTC/ETH/SOL chart
+ *   GET /wallet/transactions?page&limit — history list (paginated)
+ */
+
 import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import BalanceSection from '../components/home/BalanceSection.jsx'
@@ -37,6 +46,7 @@ export default function Home() {
 
     const run = async () => {
       try {
+        // API: GET /auth/me
         const u = await fetchSessionUser(ac.signal)
         setUser(u)
       } catch {
@@ -45,6 +55,7 @@ export default function Home() {
       }
 
       try {
+        // API: GET /wallet/summary
         const bal = await fetchWalletSummary(ac.signal)
         if (ac.signal.aborted) return
         if (bal._demo) {
@@ -69,6 +80,7 @@ export default function Home() {
       }
 
       try {
+        // API: GET /markets/flow
         const flow = await fetchMarketFlowSeries(ac.signal)
         setFlowPoints(flow.points)
         setFlowSource(flow.source)
@@ -88,6 +100,7 @@ export default function Home() {
     const run = async () => {
       setTransactionsLoading(true)
       try {
+        // API: GET /wallet/transactions?page=&limit=
         const tx = await fetchTransactions(ac.signal, { page: txPage, limit: TRANSACTION_PAGE_SIZE })
         if (ac.signal.aborted) return
         setTransactions(tx.items)

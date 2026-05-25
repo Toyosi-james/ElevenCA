@@ -1,3 +1,12 @@
+/**
+ * Rate-update notifications API.
+ *
+ * API: GET `{base}{VITE_NOTIFICATIONS_PATH}`
+ *      Default: /wallet/notifications/rate-updates
+ * Screen: Notifications.jsx
+ * Set VITE_NOTIFICATIONS_USE_MOCK=true to skip the API and use mock data only.
+ */
+
 import { getNotificationsPath, getNotificationsUseMockOnly } from '../config.js'
 import { MOCK_RATE_UPDATE_NOTIFICATIONS } from '../notifications/rateUpdateNotifications.js'
 import { apiGet } from './client.js'
@@ -91,6 +100,7 @@ export async function fetchRateUpdateNotifications(signal) {
   }
 
   try {
+    // HTTP: GET /wallet/notifications/rate-updates (path from getNotificationsPath)
     const json = await apiGet(getNotificationsPath(), { signal })
     const list = extractItems(json)
     const items = list.map((e, i) => normalizeRateUpdate(e, i)).filter(Boolean)

@@ -1,3 +1,8 @@
+/**
+ * Paginated transaction list on Home.
+ * Data comes from GET /wallet/transactions?page=&limit= (parent fetches in Home.jsx).
+ */
+
 import React from 'react'
 
 /** @param {{ items: Array<{ id: string; title: string; amount: number; currency: string; direction: 'in' | 'out'; status: string; occurredAt: number; reference?: string }>; loading?: boolean; page: number; pageSize: number; total: number; totalPages: number; hasNextPage: boolean; onPageChange: (nextPage: number) => void }} props */

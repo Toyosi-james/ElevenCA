@@ -1,3 +1,8 @@
+/**
+ * Deposit hub — navigation only (no API call).
+ * Routes users to Receive Funds or Fund Gas Fee child screens.
+ */
+
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import HomeFooter from '../components/home/HomeFooter.jsx'
@@ -14,6 +19,7 @@ export default function Deposit() {
     const ac = new AbortController()
     ;(async () => {
       try {
+        // API: GET /auth/me (header display name only)
         const u = await fetchSessionUser(ac.signal)
         if (!ac.signal.aborted) setUser(u)
       } catch {

@@ -1,3 +1,11 @@
+/**
+ * Market flow chart data (BTC / ETH / SOL series over time).
+ *
+ * API: GET `{base}{VITE_MARKET_FLOW_PATH}` (default: GET /markets/flow)
+ * Screen: Home.jsx → FlowChart component
+ * Demo generators used when API is unavailable or for 1-day intraday view.
+ */
+
 import { getMarketFlowPath } from '../config.js'
 import { apiGet } from './client.js'
 
@@ -116,6 +124,7 @@ export function selectFlowWindow(points, range, opts) {
  */
 export async function fetchMarketFlowSeries(signal) {
   try {
+    // HTTP: GET /markets/flow (path from getMarketFlowPath)
     const json = await apiGet(getMarketFlowPath(), { signal })
     const normalized = normalizeFlowSeries(json)
     if (normalized) return { points: normalized, source: 'api' }

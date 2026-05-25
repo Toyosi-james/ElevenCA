@@ -1,3 +1,8 @@
+/**
+ * App entry point — mounts React into #root and loads global styles.
+ * Routing and pages live in App.jsx.
+ */
+
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'

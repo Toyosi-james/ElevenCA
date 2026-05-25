@@ -1,3 +1,14 @@
+/**
+ * In-app crypto exchange (swap) APIs.
+ *
+ * | Step   | Method | Default path              | Screen       |
+ * |--------|--------|---------------------------|--------------|
+ * | Quote  | POST   | /wallet/exchange/quote    | Exchange.jsx |
+ * | Execute| POST   | /wallet/exchange          | Exchange.jsx |
+ *
+ * Uses mock USD prices when the API is down (see MOCK_USD_PER_UNIT).
+ */
+
 import { getExchangeExecutePath, getExchangeQuotePath } from '../config.js'
 import { ApiError, apiPost } from './client.js'
 
@@ -93,6 +104,7 @@ export async function fetchExchangeQuote(signal, body) {
   const { from, to, amountFrom } = body
   const mock = computeMockExchangeQuote(from, to, amountFrom)
   try {
+    // HTTP: POST /wallet/exchange/quote
     const json = await apiPost(
       getExchangeQuotePath(),
       { from, to, amountFrom, amount_from: amountFrom, assetFrom: from, assetTo: to },
@@ -148,6 +160,7 @@ export async function executeExchange(signal, body, walletFallback) {
     quote_id: body.quoteId,
   }
   try {
+    // HTTP: POST /wallet/exchange
     const json = await apiPost(getExchangeExecutePath(), payload, { signal })
     const w = normalizeExecuteWallet(json)
     if (w && typeof w.totalUsd === 'number') return { ok: true, wallet: w, source: 'api' }

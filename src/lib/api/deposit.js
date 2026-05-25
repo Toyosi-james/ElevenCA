@@ -1,3 +1,14 @@
+/**
+ * Deposit address APIs (wallet addresses for QR codes).
+ *
+ * | API (GET)                    | Screen              |
+ * |------------------------------|---------------------|
+ * | /wallet/deposit-address      | ReceiveFunds.jsx    |
+ * | /wallet/gas-fee-address      | FundGasFee.jsx      |
+ *
+ * If GET fails, falls back to `VITE_DEPOSIT_WALLET_ADDRESS` from config.js.
+ */
+
 import { getDepositAddressPath, getDepositWalletAddress, getFundGasFeeAddressPath } from '../config.js'
 import { apiGet } from './client.js'
 
@@ -59,6 +70,7 @@ export function normalizeDepositAddress(raw) {
  */
 async function fetchAddressWithFallback(path, fallbackAddress, signal) {
   try {
+    // HTTP: GET deposit or gas-fee address (path passed in — see fetchDepositAddress / fetchFundGasFeeAddress)
     const json = await apiGet(path, { signal })
     const n = normalizeDepositAddress(json)
     if (n) return { ...n, source: 'api' }
@@ -75,6 +87,7 @@ async function fetchAddressWithFallback(path, fallbackAddress, signal) {
  * Fetch the receiving address for standard deposits.
  * @param {AbortSignal} [signal]
  */
+/** Calls GET /wallet/deposit-address */
 export async function fetchDepositAddress(signal) {
   return fetchAddressWithFallback(getDepositAddressPath(), getDepositWalletAddress(), signal)
 }
@@ -84,6 +97,7 @@ export async function fetchDepositAddress(signal) {
  * Falls back to deposit wallet when a dedicated endpoint is unavailable.
  * @param {AbortSignal} [signal]
  */
+/** Calls GET /wallet/gas-fee-address */
 export async function fetchFundGasFeeAddress(signal) {
   return fetchAddressWithFallback(getFundGasFeeAddressPath(), getDepositWalletAddress(), signal)
 }

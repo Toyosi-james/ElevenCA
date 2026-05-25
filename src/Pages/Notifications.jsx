@@ -1,3 +1,8 @@
+/**
+ * Notifications — list of rate-update messages from the backend.
+ * API: GET /wallet/notifications/rate-updates (fetchRateUpdateNotifications).
+ */
+
 import React, { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import HomeFooter from '../components/home/HomeFooter.jsx'
@@ -54,6 +59,7 @@ export default function Notifications() {
   const load = useCallback(async (signal) => {
     setLoading(true)
     try {
+      // API: GET /wallet/notifications/rate-updates
       const { items: next, source: src } = await fetchRateUpdateNotifications(signal)
       if (signal.aborted) return
       setItems(next)
@@ -75,6 +81,7 @@ export default function Notifications() {
     const ac = new AbortController()
     ;(async () => {
       try {
+        // API: GET /auth/me
         const u = await fetchSessionUser(ac.signal)
         if (!ac.signal.aborted) setUser(u)
       } catch {

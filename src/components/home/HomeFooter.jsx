@@ -1,3 +1,5 @@
+/** Shared page footer (legal links) — no API. */
+
 import React from 'react'
 
 export default function HomeFooter() {

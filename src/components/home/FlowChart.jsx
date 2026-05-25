@@ -1,3 +1,8 @@
+/**
+ * Market flow line chart (BTC / ETH / SOL).
+ * Points are loaded on Home via GET /markets/flow; this component only renders them.
+ */
+
 import React, { useMemo } from 'react'
 
 /** @typedef {'1d' | '7d' | '30d'} FlowRange */

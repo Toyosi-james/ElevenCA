@@ -1,3 +1,11 @@
+/**
+ * Exchange (swap) screen — pick assets, amount, preview quote, confirm.
+ * APIs:
+ *   POST /wallet/exchange/quote  — live quote (debounced while typing)
+ *   POST /wallet/exchange        — execute swap
+ *   GET  /wallet/summary         — portfolio NAV for % presets
+ */
+
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import HomeFooter from '../components/home/HomeFooter.jsx'
@@ -154,6 +162,7 @@ export default function Exchange() {
     const ac = new AbortController()
     ;(async () => {
       try {
+        // API: GET /auth/me
         const u = await fetchSessionUser(ac.signal)
         if (!ac.signal.aborted) setUser(u)
       } catch {
@@ -161,6 +170,7 @@ export default function Exchange() {
         if (snap && !ac.signal.aborted) setUser(snap)
       }
       try {
+        // API: GET /wallet/summary
         const w = await fetchWalletSummary(ac.signal)
         if (!ac.signal.aborted) setWallet(w)
       } catch {
@@ -188,6 +198,7 @@ export default function Exchange() {
       setQuoteLoading(true)
       setFormError(null)
       try {
+        // API: POST /wallet/exchange/quote — body: { from, to, amountFrom }
         const { quote: q } = await fetchExchangeQuote(ac.signal, {
           from: fromId,
           to: toId,
@@ -247,6 +258,7 @@ export default function Exchange() {
     setSubmitting(true)
     const ac = new AbortController()
     try {
+      // API: POST /wallet/exchange — body: { from, to, amountFrom, quoteId? }
       const res = await executeExchange(
         ac.signal,
         {

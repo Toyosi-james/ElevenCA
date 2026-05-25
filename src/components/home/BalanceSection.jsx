@@ -1,3 +1,8 @@
+/**
+ * Home balance card — shows total USD from GET /wallet/summary (passed in as props).
+ * Quick actions navigate to /deposit, /withdraw, /exchange (frontend routes).
+ */
+
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
 

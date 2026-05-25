@@ -1,3 +1,8 @@
+/**
+ * Update asset PIN — UI only for now (validates locally, no POST yet).
+ * API: GET /auth/me for header. Add your backend path when ready.
+ */
+
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import HomeFooter from '../components/home/HomeFooter.jsx'
@@ -19,6 +24,7 @@ export default function UpdatePin() {
     const ac = new AbortController()
     ;(async () => {
       try {
+        // API: GET /auth/me (no PIN update API wired yet)
         const u = await fetchSessionUser(ac.signal)
         if (!ac.signal.aborted) setUser(u)
       } catch {

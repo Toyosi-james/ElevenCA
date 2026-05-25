@@ -1,8 +1,16 @@
+/**
+ * Current user / session API.
+ *
+ * API: GET `{base}{VITE_AUTH_ME_PATH}` (default: GET /auth/me)
+ * Used on: Home, Deposit, Withdraw, Exchange, Receive Funds, etc. (header name + avatar)
+ */
+
 import { getAuthMePath } from '../config.js'
 import { persistUserSnapshot } from '../session.js'
 import { apiGet } from './client.js'
 
 /**
+ * Turn API JSON into a simple { displayName, email?, avatarUrl? } for the UI.
  * @param {unknown} json
  * @returns {{ displayName: string; email?: string; avatarUrl?: string }}
  */
@@ -37,10 +45,12 @@ function emailLocalToName(email) {
 }
 
 /**
+ * GET /auth/me — refreshes who is logged in and saves a snapshot to sessionStorage.
  * @param {AbortSignal} [signal]
  * @returns {Promise<{ displayName: string; email?: string; avatarUrl?: string }>}
  */
 export async function fetchSessionUser(signal) {
+  // HTTP: GET /auth/me (path from getAuthMePath)
   const json = await apiGet(getAuthMePath(), { signal })
   const user = parseUser(json)
   persistUserSnapshot(user)

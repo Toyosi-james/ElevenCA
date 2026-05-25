@@ -1,10 +1,21 @@
+/**
+ * Browser session helpers (sessionStorage).
+ *
+ * After login (POST /auth/login), we may store:
+ * - Access / refresh tokens (for Authorization header on API calls)
+ * - A small user snapshot (name, email, avatar) for instant UI
+ * - Optional wallet balance override after an in-app exchange
+ *
+ * Keys are prefixed with `cb_` so they are easy to find in DevTools.
+ */
+
 const ACCESS = 'cb_access_token'
 const REFRESH = 'cb_refresh_token'
 const USER_SNAPSHOT = 'cb_user_snapshot'
 const WALLET_SUMMARY_OVERRIDE = 'cb_wallet_summary_override'
 
 /**
- * Persists bearer tokens when the API returns them in JSON.
+ * Saves login response: tokens + optional user object from POST /auth/login.
  * Prefer httpOnly cookies from your API when possible — then omit tokens from the body.
  *
  * @param {unknown} data

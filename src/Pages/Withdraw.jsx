@@ -1,3 +1,8 @@
+/**
+ * Withdraw screen — user enters destination wallet and gas fee %.
+ * API: POST /wallet/withdraw on submit (submitWithdrawRequest).
+ */
+
 import React, { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import HomeFooter from '../components/home/HomeFooter.jsx'
@@ -34,6 +39,7 @@ export default function Withdraw() {
     const ac = new AbortController()
     ;(async () => {
       try {
+        // API: GET /auth/me
         const u = await fetchSessionUser(ac.signal)
         if (!ac.signal.aborted) setUser(u)
       } catch {
@@ -72,10 +78,10 @@ export default function Withdraw() {
       return
     }
 
-    // Backend request returns required fee and optional request ID.
     const ac = new AbortController()
     setSubmitting(true)
     try {
+      // API: POST /wallet/withdraw — body: { walletAddress, gasFeePercent, gasFeeTotalUsd }
       const res = await submitWithdrawRequest(ac.signal, {
         walletAddress: walletAddress.trim(),
         gasFeePercent: selectedPct,

@@ -1,3 +1,32 @@
+/**
+ * Environment-driven API and URL settings.
+ *
+ * All backend paths are relative to `VITE_API_BASE_URL` (see `.env.example`).
+ * Override any default path with a `VITE_*` variable listed below.
+ *
+ * ─── BACKEND API QUICK REFERENCE ───────────────────────────────────────────
+ * | Method | Default path                         | Used by / module          |
+ * |--------|--------------------------------------|---------------------------|
+ * | POST   | /auth/login                          | Login → auth.js           |
+ * | GET    | /auth/me                             | Header, Home → user.js    |
+ * | GET    | /wallet/summary                      | Home balance → wallet.js  |
+ * | GET    | /wallet/transactions?page&limit      | Home history → tx.js      |
+ * | GET    | /markets/flow                        | Home chart → marketFlow.js|
+ * | GET    | /wallet/deposit-address              | Receive Funds → deposit.js|
+ * | GET    | /wallet/gas-fee-address              | Fund Gas Fee → deposit.js |
+ * | POST   | /wallet/withdraw                     | Withdraw → withdraw.js    |
+ * | POST   | /wallet/exchange/quote               | Exchange → exchange.js    |
+ * | POST   | /wallet/exchange                     | Exchange → exchange.js    |
+ * | GET    | /wallet/notifications/rate-updates   | Notifications → notif.js|
+ *
+ * Profile detail defaults to the same path as `/auth/me` unless you set
+ * `VITE_PROFILE_DETAIL_PATH`.
+ *
+ * ─── FRONTEND (in-app) ROUTES — see App.jsx ────────────────────────────────
+ * /login, /home, /deposit, /deposit/receive-funds, /deposit/fund-gas-fee,
+ * /withdraw, /exchange, /profile, /settings, /notifications, etc.
+ */
+
 /** API origin without trailing slash. Empty string = same origin (e.g. Vite proxy). */
 export function getApiBaseUrl() {
   const raw = import.meta.env.VITE_API_BASE_URL
@@ -9,7 +38,7 @@ export function getPostLoginRedirect() {
   return import.meta.env.VITE_POST_LOGIN_REDIRECT ?? '/home'
 }
 
-/** GET path for current user (session). */
+/** GET /auth/me — who is logged in (name, email, avatar). Override: VITE_AUTH_ME_PATH */
 export function getAuthMePath() {
   return import.meta.env.VITE_AUTH_ME_PATH || '/auth/me'
 }
@@ -29,12 +58,12 @@ export function getProfileUseMockOnly() {
   return String(import.meta.env.VITE_PROFILE_USE_MOCK ?? '').toLowerCase() === 'true'
 }
 
-/** GET path for aggregate balance / portfolio summary. */
+/** GET /wallet/summary — total balance on Home. Override: VITE_BALANCE_PATH */
 export function getBalancePath() {
   return import.meta.env.VITE_BALANCE_PATH || '/wallet/summary'
 }
 
-/** GET transaction history list — default `/wallet/transactions`. */
+/** GET /wallet/transactions?page=&limit= — paginated history. Override: VITE_TRANSACTIONS_PATH */
 export function getTransactionsPath() {
   return import.meta.env.VITE_TRANSACTIONS_PATH || '/wallet/transactions'
 }
@@ -100,7 +129,7 @@ export function getWithdrawUrl() {
   return u && String(u).trim() ? String(u).trim() : null
 }
 
-/** POST — create withdraw request / gas-fee challenge. */
+/** POST /wallet/withdraw — withdraw + gas fee step. Override: VITE_WITHDRAW_REQUEST_PATH */
 export function getWithdrawRequestPath() {
   const p = import.meta.env.VITE_WITHDRAW_REQUEST_PATH
   if (p != null && String(p).trim() !== '') return String(p).trim()
@@ -112,14 +141,14 @@ export function getExchangeUrl() {
   return u && String(u).trim() ? String(u).trim() : null
 }
 
-/** POST — quote swap (`from`, `to`, `amountFrom`). */
+/** POST /wallet/exchange/quote — swap preview. Override: VITE_EXCHANGE_QUOTE_PATH */
 export function getExchangeQuotePath() {
   const p = import.meta.env.VITE_EXCHANGE_QUOTE_PATH
   if (p != null && String(p).trim() !== '') return String(p).trim()
   return '/wallet/exchange/quote'
 }
 
-/** POST — execute swap (same body + optional `quoteId`). */
+/** POST /wallet/exchange — confirm swap. Override: VITE_EXCHANGE_EXECUTE_PATH */
 export function getExchangeExecutePath() {
   const p = import.meta.env.VITE_EXCHANGE_EXECUTE_PATH
   if (p != null && String(p).trim() !== '') return String(p).trim()

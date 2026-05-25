@@ -1,3 +1,11 @@
+/**
+ * Portfolio balance API.
+ *
+ * API: GET `{base}{VITE_BALANCE_PATH}` (default: GET /wallet/summary)
+ * Screen: Home.jsx (BalanceSection), Exchange.jsx (NAV presets)
+ * Falls back to demo numbers if the request fails.
+ */
+
 import { getBalancePath } from '../config.js'
 import { apiGet } from './client.js'
 
@@ -38,6 +46,7 @@ function num(v) {
   return null
 }
 
+/** Demo balance shown when GET /wallet/summary is unavailable. */
 export function mockWalletSummary() {
   return {
     totalUsd: 2_847_392.55,
@@ -48,11 +57,13 @@ export function mockWalletSummary() {
 }
 
 /**
+ * GET wallet summary — total USD, 24h change %, currency code.
  * @param {AbortSignal} [signal]
  * @returns {Promise<{ totalUsd: number; change24hPct: number | null; currency: string; _demo?: boolean }>}
  */
 export async function fetchWalletSummary(signal) {
   try {
+    // HTTP: GET /wallet/summary (path from getBalancePath)
     const json = await apiGet(getBalancePath(), { signal })
     const n = normalizeBalance(json)
     if (n) return { ...n, _demo: false }
