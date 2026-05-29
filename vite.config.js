@@ -1,4 +1,4 @@
-/** Vite build config — React + Tailwind. API base URL is set in .env (VITE_API_BASE_URL). */
+/** Vite build config — React + Tailwind (frontend-only demo). */
 
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'

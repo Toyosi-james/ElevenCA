@@ -1,12 +1,11 @@
 /**
- * Fallback mock rate-update notifications when the API is unavailable or `VITE_NOTIFICATIONS_USE_MOCK=true`.
- * Replace with live data via `fetchRateUpdateNotifications` in `src/lib/api/notifications.js`.
+ * Rate-update notifications for the Notifications screen.
  */
 
 /** @typedef {{ id: string; pair: string; headline: string; body: string; changePct: number; occurredAt: number }} RateUpdateNotification */
 
 /** @type {RateUpdateNotification[]} */
-export const MOCK_RATE_UPDATE_NOTIFICATIONS = [
+export const RATE_UPDATE_NOTIFICATIONS = [
   {
     id: '1',
     pair: 'BTC / USD',
@@ -49,4 +48,9 @@ export function formatNotificationTime(ms) {
   if (h < 48) return `${h}h ago`
   const days = Math.floor(h / 24)
   return `${days}d ago`
+}
+
+/** @param {AbortSignal} [_signal] */
+export async function loadRateUpdateNotifications(_signal) {
+  return { items: [...RATE_UPDATE_NOTIFICATIONS] }
 }

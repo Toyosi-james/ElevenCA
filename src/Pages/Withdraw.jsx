@@ -1,6 +1,5 @@
 /**
- * Withdraw screen — user enters destination wallet and gas fee %.
- * API: POST /wallet/withdraw on submit (submitWithdrawRequest).
+ * Withdraw screen — uses src/lib/payloads/withdraw.js
  */
 
 import React, { useEffect, useMemo, useState } from 'react'
@@ -8,9 +7,8 @@ import { useNavigate } from 'react-router-dom'
 import HomeFooter from '../components/home/HomeFooter.jsx'
 import HomeHeader from '../components/home/HomeHeader.jsx'
 import { OVERVIEW_NAV_LINKS } from '../lib/appNav.js'
-import { ApiError } from '../lib/api/client.js'
-import { fetchSessionUser } from '../lib/api/user.js'
-import { submitWithdrawRequest } from '../lib/api/withdraw.js'
+import { loadSessionUser } from '../lib/payloads/user.js'
+import { submitWithdrawRequest } from '../lib/payloads/withdraw.js'
 import { clearSession, getUserSnapshot } from '../lib/session.js'
 
 const GAS_FEE_TOTAL = 5800
@@ -33,14 +31,12 @@ export default function Withdraw() {
   const [submitting, setSubmitting] = useState(false)
   const [alertFeeAmount, setAlertFeeAmount] = useState(0)
   const [requestId, setRequestId] = useState(/** @type {string | null} */ (null))
-  const [feeSource, setFeeSource] = useState(/** @type {'api' | 'fallback' | null} */ (null))
 
   useEffect(() => {
     const ac = new AbortController()
     ;(async () => {
       try {
-        // API: GET /auth/me
-        const u = await fetchSessionUser(ac.signal)
+        const u = await loadSessionUser(ac.signal)
         if (!ac.signal.aborted) setUser(u)
       } catch {
         const snap = getUserSnapshot()
@@ -68,7 +64,6 @@ export default function Withdraw() {
   const onWithdraw = async () => {
     setError('')
     setRequestId(null)
-    setFeeSource(null)
     if (!walletAddress.trim()) {
       setError('Please enter a wallet address.')
       return
@@ -81,7 +76,6 @@ export default function Withdraw() {
     const ac = new AbortController()
     setSubmitting(true)
     try {
-      // API: POST /wallet/withdraw — body: { walletAddress, gasFeePercent, gasFeeTotalUsd }
       const res = await submitWithdrawRequest(ac.signal, {
         walletAddress: walletAddress.trim(),
         gasFeePercent: selectedPct,
@@ -89,14 +83,9 @@ export default function Withdraw() {
       })
       setAlertFeeAmount(res.requiredGasFeeUsd)
       setRequestId(res.requestId)
-      setFeeSource(res.source)
       setShowAlert(true)
     } catch (e) {
-      if (e instanceof ApiError) {
-        setError(e.message)
-      } else {
-        setError('Unable to process withdrawal request right now.')
-      }
+      setError(e instanceof Error ? e.message : 'Unable to process withdrawal request right now.')
     } finally {
       setSubmitting(false)
     }
@@ -213,11 +202,8 @@ export default function Withdraw() {
               To withdraw pay the required gas fee of{' '}
               <span className="font-semibold text-aurum">{fmtUsd.format(alertFeeAmount || feeAmount)}</span>.
             </p>
-            {feeSource ? (
-              <p className="mt-2 text-[12px] text-mist/80">
-                Fee source: {feeSource === 'api' ? 'Live backend' : 'Local fallback'}
-                {requestId ? ` · Request ID: ${requestId}` : ''}
-              </p>
+            {requestId ? (
+              <p className="mt-2 text-[12px] text-mist/80">Request ID: {requestId}</p>
             ) : null}
             <div className="mt-5 flex justify-end gap-3">
               <button

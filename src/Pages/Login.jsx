@@ -1,14 +1,12 @@
 /**
- * Login screen — collects username, asset PIN, and password.
- * API: POST /auth/login via signIn() → persistAuthPayload() → redirect to /home
+ * Login screen — demo auth via src/lib/payloads/auth.js
  */
 
 import React, { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { signIn } from '../lib/api/auth.js'
-import { ApiError } from '../lib/api/client.js'
+import { signIn } from '../lib/payloads/auth.js'
 import { getPasswordResetUrl, getPostLoginRedirect } from '../lib/config.js'
-import { extractFieldErrors, getStoredAccessToken, getUserSnapshot, persistAuthPayload } from '../lib/session.js'
+import { isLoggedIn } from '../lib/session.js'
 
 const BRAND = 'ElevenCA'
 
@@ -111,7 +109,7 @@ const Login = () => {
   }, [])
 
   useEffect(() => {
-    if (getStoredAccessToken() || getUserSnapshot()) {
+    if (isLoggedIn()) {
       navigate(getPostLoginRedirect(), { replace: true })
     }
   }, [navigate])
@@ -152,27 +150,16 @@ const Login = () => {
 
     setLoading(true)
     try {
-      // API: POST /auth/login — body: { assetPin, username, password }
-      const data = await signIn({
+      await signIn({
         assetPin: trimmedPin,
         username: trimmedUser,
         password,
         signal: ac.signal,
       })
-      // Save tokens/user from login response (no extra API call here)
-      persistAuthPayload(data, { username: trimmedUser })
       navigate(getPostLoginRedirect(), { replace: true })
     } catch (err) {
       if (err instanceof DOMException && err.name === 'AbortError') return
-      if (err instanceof ApiError) {
-        const fields = extractFieldErrors(err.body)
-        if (Object.keys(fields).length > 0) {
-          setFieldErrors(fields)
-        }
-        setFormError(err.message)
-        return
-      }
-      setFormError('Something went wrong. Please try again.')
+      setFormError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
     } finally {
       setLoading(false)
     }

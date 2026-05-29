@@ -1,13 +1,12 @@
 /**
- * Deposit hub — navigation only (no API call).
- * Routes users to Receive Funds or Fund Gas Fee child screens.
+ * Deposit hub — routes to Receive Funds or Fund Gas Fee (payloads in lib/payloads/deposit.js).
  */
 
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import HomeFooter from '../components/home/HomeFooter.jsx'
 import HomeHeader from '../components/home/HomeHeader.jsx'
-import { fetchSessionUser } from '../lib/api/user.js'
+import { loadSessionUser } from '../lib/payloads/user.js'
 import { DEPOSIT_HEADER_NAV_LINKS } from '../lib/appNav.js'
 import { clearSession, getUserSnapshot } from '../lib/session.js'
 
@@ -19,8 +18,7 @@ export default function Deposit() {
     const ac = new AbortController()
     ;(async () => {
       try {
-        // API: GET /auth/me (header display name only)
-        const u = await fetchSessionUser(ac.signal)
+        const u = await loadSessionUser(ac.signal)
         if (!ac.signal.aborted) setUser(u)
       } catch {
         const snap = getUserSnapshot()

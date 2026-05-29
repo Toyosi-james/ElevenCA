@@ -1,9 +1,5 @@
 /**
- * Exchange (swap) screen — pick assets, amount, preview quote, confirm.
- * APIs:
- *   POST /wallet/exchange/quote  — live quote (debounced while typing)
- *   POST /wallet/exchange        — execute swap
- *   GET  /wallet/summary         — portfolio NAV for % presets
+ * Exchange screen — quotes and swaps use src/lib/payloads/exchange.js
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
@@ -11,10 +7,14 @@ import { useNavigate } from 'react-router-dom'
 import HomeFooter from '../components/home/HomeFooter.jsx'
 import HomeHeader from '../components/home/HomeHeader.jsx'
 import { EXCHANGE_HEADER_NAV_LINKS } from '../lib/appNav.js'
-import { ApiError } from '../lib/api/client.js'
-import { computeMockExchangeQuote, executeExchange, fetchExchangeQuote, mockUsdUnitPrice } from '../lib/api/exchange.js'
-import { fetchSessionUser } from '../lib/api/user.js'
-import { fetchWalletSummary, mockWalletSummary } from '../lib/api/wallet.js'
+import {
+  computeExchangeQuote,
+  executeExchange,
+  loadExchangeQuote,
+  usdUnitPrice,
+} from '../lib/payloads/exchange.js'
+import { loadSessionUser } from '../lib/payloads/user.js'
+import { WALLET_SUMMARY, loadWalletSummary } from '../lib/payloads/wallet.js'
 import { clearSession, getUserSnapshot, persistWalletSummaryOverride } from '../lib/session.js'
 
 /** @typedef {{ id: string; label: string; symbol: string; accent: string; glow: string }} ExchangeAsset */
@@ -142,7 +142,7 @@ function DepositStyleCard({ children, innerClassName = '', className = '', allow
 export default function Exchange() {
   const navigate = useNavigate()
   const [user, setUser] = useState(() => getUserSnapshot() || { displayName: 'Client' })
-  const [wallet, setWallet] = useState(() => mockWalletSummary())
+  const [wallet, setWallet] = useState(() => ({ ...WALLET_SUMMARY }))
 
   const [fromId, setFromId] = useState('BTC')
   const [toId, setToId] = useState('ETH')
@@ -152,7 +152,7 @@ export default function Exchange() {
   const [amountStr, setAmountStr] = useState('1')
   const [preset, setPreset] = useState(/** @type {null | 25 | 50 | 75 | 100} */ (null))
 
-  const [quote, setQuote] = useState(/** @type {ReturnType<typeof computeMockExchangeQuote> | null} */ (null))
+  const [quote, setQuote] = useState(/** @type {ReturnType<typeof computeExchangeQuote> | null} */ (null))
   const [quoteLoading, setQuoteLoading] = useState(false)
 
   const [submitting, setSubmitting] = useState(false)
@@ -162,19 +162,17 @@ export default function Exchange() {
     const ac = new AbortController()
     ;(async () => {
       try {
-        // API: GET /auth/me
-        const u = await fetchSessionUser(ac.signal)
+        const u = await loadSessionUser(ac.signal)
         if (!ac.signal.aborted) setUser(u)
       } catch {
         const snap = getUserSnapshot()
         if (snap && !ac.signal.aborted) setUser(snap)
       }
       try {
-        // API: GET /wallet/summary
-        const w = await fetchWalletSummary(ac.signal)
+        const w = await loadWalletSummary(ac.signal)
         if (!ac.signal.aborted) setWallet(w)
       } catch {
-        if (!ac.signal.aborted) setWallet(mockWalletSummary())
+        if (!ac.signal.aborted) setWallet({ ...WALLET_SUMMARY })
       }
     })()
     return () => ac.abort()
@@ -198,8 +196,7 @@ export default function Exchange() {
       setQuoteLoading(true)
       setFormError(null)
       try {
-        // API: POST /wallet/exchange/quote — body: { from, to, amountFrom }
-        const { quote: q } = await fetchExchangeQuote(ac.signal, {
+        const { quote: q } = await loadExchangeQuote(ac.signal, {
           from: fromId,
           to: toId,
           amountFrom: amountFromNum,
@@ -209,7 +206,7 @@ export default function Exchange() {
         }
       } catch {
         if (!ac.signal.aborted) {
-          setQuote(computeMockExchangeQuote(fromId, toId, amountFromNum))
+          setQuote(computeExchangeQuote(fromId, toId, amountFromNum))
         }
       } finally {
         if (!ac.signal.aborted) setQuoteLoading(false)
@@ -224,7 +221,7 @@ export default function Exchange() {
   const applyPreset = useCallback(
     (pct) => {
       const totalUsd = wallet.totalUsd
-      const px = mockUsdUnitPrice(fromId)
+      const px = usdUnitPrice(fromId)
       if (!px || totalUsd <= 0) return
       const usdPortion = totalUsd * (pct / 100)
       const amt = usdPortion / px
@@ -258,7 +255,7 @@ export default function Exchange() {
     setSubmitting(true)
     const ac = new AbortController()
     try {
-      // API: POST /wallet/exchange — body: { from, to, amountFrom, quoteId? }
+      // Payload: exchange.js — updates wallet total locally
       const res = await executeExchange(
         ac.signal,
         {
@@ -282,8 +279,7 @@ export default function Exchange() {
       }
       navigate('/home')
     } catch (err) {
-      const msg = err instanceof ApiError ? err.message : 'Exchange could not be completed.'
-      setFormError(msg)
+      setFormError(err instanceof Error ? err.message : 'Exchange could not be completed.')
     } finally {
       setSubmitting(false)
     }

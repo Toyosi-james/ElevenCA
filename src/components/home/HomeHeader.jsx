@@ -1,6 +1,6 @@
 /**
  * Top bar on dashboard-style pages: greeting, nav links, profile / notifications / settings / logout.
- * Logout clears sessionStorage and sends user to /login (no API call unless you add one).
+ * Logout clears sessionStorage and sends user to /login.
  */
 
 import React from 'react'

@@ -1,6 +1,5 @@
 /**
- * Paginated transaction list on Home.
- * Data comes from GET /wallet/transactions?page=&limit= (parent fetches in Home.jsx).
+ * Paginated transaction list — data from src/lib/payloads/transactions.js
  */
 
 import React from 'react'

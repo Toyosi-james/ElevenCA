@@ -1,10 +1,5 @@
 /**
- * Main dashboard after login.
- * APIs on load:
- *   GET /auth/me          — user name in header
- *   GET /wallet/summary   — balance card
- *   GET /markets/flow     — BTC/ETH/SOL chart
- *   GET /wallet/transactions?page&limit — history list (paginated)
+ * Main dashboard — loads all data from src/lib/payloads/*.js
  */
 
 import React, { useEffect, useMemo, useState } from 'react'
@@ -14,10 +9,14 @@ import FlowChart from '../components/home/FlowChart.jsx'
 import TransactionHistory from '../components/home/TransactionHistory.jsx'
 import HomeFooter from '../components/home/HomeFooter.jsx'
 import HomeHeader from '../components/home/HomeHeader.jsx'
-import { buildMockMarketFlow, fetchMarketFlowSeries, selectFlowWindow } from '../lib/api/marketFlow.js'
-import { fetchTransactions } from '../lib/api/transactions.js'
-import { fetchWalletSummary, mockWalletSummary } from '../lib/api/wallet.js'
-import { fetchSessionUser } from '../lib/api/user.js'
+import {
+  buildMarketFlowSeries,
+  loadMarketFlowSeries,
+  selectFlowWindow,
+} from '../lib/payloads/marketFlow.js'
+import { loadTransactions } from '../lib/payloads/transactions.js'
+import { WALLET_SUMMARY, loadWalletSummary } from '../lib/payloads/wallet.js'
+import { loadSessionUser } from '../lib/payloads/user.js'
 import { clearSession, clearWalletSummaryOverride, getUserSnapshot, peekWalletSummaryOverride } from '../lib/session.js'
 
 const TRANSACTION_PAGE_SIZE = 6
@@ -25,9 +24,8 @@ const TRANSACTION_PAGE_SIZE = 6
 export default function Home() {
   const navigate = useNavigate()
   const [user, setUser] = useState(() => getUserSnapshot() || { displayName: 'Client' })
-  const [balance, setBalance] = useState(() => mockWalletSummary())
-  const [flowPoints, setFlowPoints] = useState(() => buildMockMarketFlow())
-  const [flowSource, setFlowSource] = useState(() => /** @type {'api' | 'demo'} */ ('demo'))
+  const [balance, setBalance] = useState(() => ({ ...WALLET_SUMMARY }))
+  const [flowPoints, setFlowPoints] = useState(() => buildMarketFlowSeries())
   const [chartRange, setChartRange] = useState(() => /** @type {'1d' | '7d' | '30d'} */ ('30d'))
   const [transactions, setTransactions] = useState(() => [])
   const [txPage, setTxPage] = useState(1)
@@ -37,8 +35,8 @@ export default function Home() {
   const [transactionsLoading, setTransactionsLoading] = useState(true)
 
   const chartPoints = useMemo(
-    () => selectFlowWindow(flowPoints, chartRange, { source: flowSource }),
-    [flowPoints, chartRange, flowSource],
+    () => selectFlowWindow(flowPoints, chartRange),
+    [flowPoints, chartRange],
   )
 
   useEffect(() => {
@@ -46,8 +44,7 @@ export default function Home() {
 
     const run = async () => {
       try {
-        // API: GET /auth/me
-        const u = await fetchSessionUser(ac.signal)
+        const u = await loadSessionUser(ac.signal)
         setUser(u)
       } catch {
         const snap = getUserSnapshot()
@@ -55,40 +52,30 @@ export default function Home() {
       }
 
       try {
-        // API: GET /wallet/summary
-        const bal = await fetchWalletSummary(ac.signal)
+        const bal = await loadWalletSummary(ac.signal)
         if (ac.signal.aborted) return
-        if (bal._demo) {
-          const o = peekWalletSummaryOverride()
-          if (o) {
-            clearWalletSummaryOverride()
-            setBalance({
-              ...bal,
-              totalUsd: o.totalUsd,
-              change24hPct: o.change24hPct ?? bal.change24hPct,
-              currency: typeof o.currency === 'string' ? o.currency : bal.currency,
-            })
-          } else {
-            setBalance(bal)
-          }
-        } else {
+        const o = peekWalletSummaryOverride()
+        if (o) {
           clearWalletSummaryOverride()
+          setBalance({
+            ...bal,
+            totalUsd: o.totalUsd,
+            change24hPct: o.change24hPct ?? bal.change24hPct,
+            currency: typeof o.currency === 'string' ? o.currency : bal.currency,
+          })
+        } else {
           setBalance(bal)
         }
       } catch {
-        if (!ac.signal.aborted) setBalance(mockWalletSummary())
+        if (!ac.signal.aborted) setBalance({ ...WALLET_SUMMARY })
       }
 
       try {
-        // API: GET /markets/flow
-        const flow = await fetchMarketFlowSeries(ac.signal)
+        const flow = await loadMarketFlowSeries(ac.signal)
         setFlowPoints(flow.points)
-        setFlowSource(flow.source)
       } catch {
-        setFlowPoints(buildMockMarketFlow())
-        setFlowSource('demo')
+        setFlowPoints(buildMarketFlowSeries())
       }
-
     }
 
     run()
@@ -100,8 +87,7 @@ export default function Home() {
     const run = async () => {
       setTransactionsLoading(true)
       try {
-        // API: GET /wallet/transactions?page=&limit=
-        const tx = await fetchTransactions(ac.signal, { page: txPage, limit: TRANSACTION_PAGE_SIZE })
+        const tx = await loadTransactions(ac.signal, { page: txPage, limit: TRANSACTION_PAGE_SIZE })
         if (ac.signal.aborted) return
         setTransactions(tx.items)
         setTxTotal(tx.total)
@@ -135,15 +121,7 @@ export default function Home() {
           <BalanceSection totalUsd={balance.totalUsd} change24hPct={balance.change24hPct} currency={balance.currency} />
 
           <div className="mt-10 sm:mt-12">
-            <FlowChart
-              points={chartPoints}
-              range={chartRange}
-              onRangeChange={setChartRange}
-              windowMeta={{
-                source: flowSource,
-                apiDaily1d: flowSource === 'api' && chartRange === '1d',
-              }}
-            />
+            <FlowChart points={chartPoints} range={chartRange} onRangeChange={setChartRange} />
           </div>
 
           <div className="mt-10 sm:mt-12">

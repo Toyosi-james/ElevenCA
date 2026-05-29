@@ -1,14 +1,11 @@
-/**
- * Settings menu — links to update PIN / password screens.
- * API: GET /auth/me for header only. Save endpoints not wired in this app yet.
- */
+/** Settings menu — links to update PIN / password screens (local UI only). */
 
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import HomeFooter from '../components/home/HomeFooter.jsx'
 import HomeHeader from '../components/home/HomeHeader.jsx'
 import { OVERVIEW_NAV_LINKS } from '../lib/appNav.js'
-import { fetchSessionUser } from '../lib/api/user.js'
+import { loadSessionUser } from '../lib/payloads/user.js'
 import { clearSession, getUserSnapshot } from '../lib/session.js'
 
 export default function Settings() {
@@ -19,8 +16,7 @@ export default function Settings() {
     const ac = new AbortController()
     ;(async () => {
       try {
-        // API: GET /auth/me
-        const u = await fetchSessionUser(ac.signal)
+        const u = await loadSessionUser(ac.signal)
         if (!ac.signal.aborted) setUser(u)
       } catch {
         const snap = getUserSnapshot()

@@ -1,6 +1,5 @@
 /**
- * Notifications — list of rate-update messages from the backend.
- * API: GET /wallet/notifications/rate-updates (fetchRateUpdateNotifications).
+ * Notifications — data from src/lib/payloads/notifications.js
  */
 
 import React, { useCallback, useEffect, useState } from 'react'
@@ -8,12 +7,11 @@ import { useNavigate } from 'react-router-dom'
 import HomeFooter from '../components/home/HomeFooter.jsx'
 import HomeHeader from '../components/home/HomeHeader.jsx'
 import { OVERVIEW_NAV_LINKS } from '../lib/appNav.js'
-import { fetchRateUpdateNotifications } from '../lib/api/notifications.js'
-import { fetchSessionUser } from '../lib/api/user.js'
-import { formatNotificationTime } from '../lib/notifications/rateUpdateNotifications.js'
+import { formatNotificationTime, loadRateUpdateNotifications } from '../lib/payloads/notifications.js'
+import { loadSessionUser } from '../lib/payloads/user.js'
 import { clearSession, getUserSnapshot } from '../lib/session.js'
 
-/** @typedef {import('../lib/api/notifications.js').RateUpdateNotification} RateUpdateNotification */
+/** @typedef {import('../lib/payloads/notifications.js').RateUpdateNotification} RateUpdateNotification */
 
 function NotificationCard({ n }) {
   const up = n.changePct > 0
@@ -54,16 +52,13 @@ export default function Notifications() {
   const [user, setUser] = useState(() => getUserSnapshot() || { displayName: 'Client' })
   const [items, setItems] = useState(/** @type {RateUpdateNotification[]} */ ([]))
   const [loading, setLoading] = useState(true)
-  const [source, setSource] = useState(/** @type {'api' | 'mock' | null} */ (null))
 
   const load = useCallback(async (signal) => {
     setLoading(true)
     try {
-      // API: GET /wallet/notifications/rate-updates
-      const { items: next, source: src } = await fetchRateUpdateNotifications(signal)
+      const { items: next } = await loadRateUpdateNotifications(signal)
       if (signal.aborted) return
       setItems(next)
-      setSource(src)
     } catch (e) {
       if (signal.aborted || (e instanceof DOMException && e.name === 'AbortError')) return
     } finally {
@@ -81,8 +76,7 @@ export default function Notifications() {
     const ac = new AbortController()
     ;(async () => {
       try {
-        // API: GET /auth/me
-        const u = await fetchSessionUser(ac.signal)
+        const u = await loadSessionUser(ac.signal)
         if (!ac.signal.aborted) setUser(u)
       } catch {
         const snap = getUserSnapshot()
@@ -119,56 +113,43 @@ export default function Notifications() {
           showActions={false}
         />
 
-        <main className="w-full flex-1 px-4 pb-12 pt-8 sm:px-6 sm:pt-10 lg:px-10 lg:pt-12 xl:px-14 2xl:px-16">
-          <div className="mb-8 flex flex-col gap-4 border-b border-white/[0.07] pb-8 sm:mb-10 sm:flex-row sm:items-end sm:justify-between">
-            <header className="max-w-2xl text-center sm:text-left">
-              <p className="text-[10px] font-semibold uppercase tracking-[0.34em] text-aurum/90">Alerts</p>
-              <h1 className="mt-2 font-serif text-[2rem] font-medium tracking-tight text-pearl sm:text-[2.35rem]">Notifications</h1>
-              <p className="mx-auto mt-3 max-w-xl text-[14px] font-light leading-relaxed text-mist/90 sm:mx-0">
-                Rate updates from our pricing desk and venue feeds. These refresh as markets move.
-              </p>
-            </header>
-            <div className="flex shrink-0 flex-wrap items-center justify-center gap-3 sm:justify-end">
-              {source ? (
-                <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.2em] text-mist/80">
-                  Data: {source === 'api' ? 'API' : 'Simulator'}
-                </span>
-              ) : null}
+        <main className="w-full flex-1 px-4 pb-14 pt-8 sm:px-6 sm:pt-10 lg:px-10 lg:pt-12 xl:px-14">
+          <header className="mx-auto max-w-2xl text-center">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.34em] text-aurum/90">Alerts</p>
+            <h1 className="mt-2 font-serif text-[2rem] font-medium tracking-tight text-pearl sm:text-[2.35rem]">Notifications</h1>
+            <p className="mx-auto mt-3 max-w-xl text-[14px] font-light leading-relaxed text-mist/90">
+              Rate updates and pricing notices for your watched pairs.
+            </p>
+            <div className="mx-auto mt-6 h-px w-full max-w-sm bg-[linear-gradient(90deg,transparent,rgba(201,171,122,0.45),transparent)]" />
+          </header>
+
+          <section className="mx-auto mt-10 max-w-2xl">
+            <div className="mb-6 flex items-center justify-between gap-4">
+              <p className="text-[12px] text-mist/75">{items.length} notification{items.length === 1 ? '' : 's'}</p>
               <button
                 type="button"
                 onClick={onRefresh}
                 disabled={loading}
-                className="rounded-xl border border-white/12 bg-white/[0.04] px-4 py-2.5 text-[11px] font-semibold uppercase tracking-[0.18em] text-pearl transition hover:border-aurum/35 hover:bg-white/[0.07] disabled:opacity-45"
+                className="rounded-lg border border-white/12 bg-white/[0.04] px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-mist transition hover:bg-white/[0.08] hover:text-pearl disabled:opacity-50"
               >
                 Refresh
               </button>
             </div>
-          </div>
 
-          {loading ? (
-            <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 xl:grid-cols-3 2xl:grid-cols-4" aria-busy="true" aria-label="Loading notifications">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <li key={`sk-${i}`} className="animate-pulse rounded-2xl border border-white/[0.06] bg-white/[0.03] p-5 sm:p-6">
-                  <div className="h-3 w-24 rounded bg-white/10" />
-                  <div className="mt-4 h-4 w-3/4 max-w-[12rem] rounded bg-white/10" />
-                  <div className="mt-3 h-3 w-full rounded bg-white/[0.06]" />
-                  <div className="mt-2 h-3 w-[90%] rounded bg-white/[0.06]" />
-                  <div className="mt-4 h-8 w-28 rounded-lg bg-white/[0.06]" />
-                </li>
-              ))}
-            </ul>
-          ) : items.length === 0 ? (
-            <p className="py-16 text-center text-[14px] text-mist/80">No rate updates yet. Check back after the next pricing refresh.</p>
-          ) : (
-            <ul
-              className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:gap-5 xl:grid-cols-3 2xl:grid-cols-4"
-              aria-label="Rate update notifications"
-            >
-              {items.map((n) => (
-                <NotificationCard key={n.id} n={n} />
-              ))}
-            </ul>
-          )}
+            {loading && items.length === 0 ? (
+              <ul className="space-y-4">
+                {[1, 2, 3].map((i) => (
+                  <li key={i} className="h-40 animate-pulse rounded-2xl border border-white/[0.06] bg-white/[0.03]" />
+                ))}
+              </ul>
+            ) : items.length === 0 ? (
+              <p className="rounded-2xl border border-white/10 bg-slate-elevated/40 px-6 py-12 text-center text-[14px] text-mist/80">
+                No notifications yet.
+              </p>
+            ) : (
+              <ul className="space-y-4">{items.map((n) => <NotificationCard key={n.id} n={n} />)}</ul>
+            )}
+          </section>
         </main>
 
         <HomeFooter />

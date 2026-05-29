@@ -1,12 +1,11 @@
 /**
- * Profile screen — shows account fields (name, email, address, etc.).
- * API: GET profile detail (default same path as /auth/me) via fetchProfileDetail().
+ * Profile screen — data from src/lib/payloads/profile.js
  */
 
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import HomeFooter from '../components/home/HomeFooter.jsx'
-import { PROFILE_MOCK_DATA, fetchProfileDetail, profileInitialLetter } from '../lib/api/profile.js'
+import { PROFILE_DETAIL, loadProfileDetail, profileInitialLetter } from '../lib/payloads/profile.js'
 import { getUserSnapshot } from '../lib/session.js'
 
 /**
@@ -62,8 +61,7 @@ export default function Profile() {
     const ac = new AbortController()
     const run = async () => {
       try {
-        // API: GET profile (default /auth/me, or VITE_PROFILE_DETAIL_PATH)
-        const { profile: p } = await fetchProfileDetail(ac.signal)
+        const { profile: p } = await loadProfileDetail(ac.signal)
         if (!ac.signal.aborted) setProfile(p)
       } finally {
         if (!ac.signal.aborted) setLoading(false)
@@ -73,13 +71,13 @@ export default function Profile() {
     return () => ac.abort()
   }, [])
 
-  const letter = profile ? profileInitialLetter(profile, snapshot?.displayName) : PROFILE_MOCK_DATA.firstName.charAt(0).toUpperCase()
+  const letter = profile ? profileInitialLetter(profile, snapshot?.displayName) : PROFILE_DETAIL.firstName.charAt(0).toUpperCase()
   const fullName =
     profile && profile.firstName !== '—' && profile.lastName !== '—'
       ? `${profile.firstName} ${profile.lastName}`.trim()
       : profile && profile.firstName !== '—'
         ? profile.firstName
-        : snapshot?.displayName ?? `${PROFILE_MOCK_DATA.firstName} ${PROFILE_MOCK_DATA.lastName}`
+        : snapshot?.displayName ?? `${PROFILE_DETAIL.firstName} ${PROFILE_DETAIL.lastName}`
 
   return (
     <div className="relative min-h-screen w-full overflow-x-hidden bg-ink text-pearl">

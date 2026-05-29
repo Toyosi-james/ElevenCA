@@ -1,5 +1,5 @@
 /**
- * Shared header navigation links (frontend routes, not API paths).
+ * Shared header navigation links for in-app routes.
  * Import the constant that matches your page so the header shows a back link.
  */
 

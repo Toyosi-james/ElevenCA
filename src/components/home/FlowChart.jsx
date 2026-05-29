@@ -1,6 +1,5 @@
 /**
- * Market flow line chart (BTC / ETH / SOL).
- * Points are loaded on Home via GET /markets/flow; this component only renders them.
+ * Market flow chart — data from src/lib/payloads/marketFlow.js
  */
 
 import React, { useMemo } from 'react'
@@ -13,10 +12,9 @@ import React, { useMemo } from 'react'
  *   points: { label: string; btc: number; eth: number; sol: number }[]
  *   range: FlowRange
  *   onRangeChange: (r: FlowRange) => void
- *   windowMeta?: { source: 'api' | 'demo'; apiDaily1d?: boolean }
  * }} props
  */
-export default function FlowChart({ points, range, onRangeChange, windowMeta }) {
+export default function FlowChart({ points, range, onRangeChange }) {
   const layout = useMemo(() => {
     const W = 920
     const H = 300
@@ -151,10 +149,6 @@ export default function FlowChart({ points, range, onRangeChange, windowMeta }) 
                 </span>
               ))}
             </div>
-
-            {windowMeta?.apiDaily1d ? (
-              <span className="font-mono text-[9px] uppercase tracking-wider text-amber-200/55">Daily · 1D uses 2 closes</span>
-            ) : null}
           </div>
 
           <div

@@ -1,13 +1,10 @@
-/**
- * Update password — UI only for now (validates locally, no POST yet).
- * API: GET /auth/me for header. Add your backend path when ready.
- */
+/** Update password — local validation only (no server save). */
 
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import HomeFooter from '../components/home/HomeFooter.jsx'
 import HomeHeader from '../components/home/HomeHeader.jsx'
-import { fetchSessionUser } from '../lib/api/user.js'
+import { loadSessionUser } from '../lib/payloads/user.js'
 import { clearSession, getUserSnapshot } from '../lib/session.js'
 
 const SETTINGS_NAV_LINKS = [{ to: '/settings', label: 'Settings' }]
@@ -24,8 +21,7 @@ export default function UpdatePassword() {
     const ac = new AbortController()
     ;(async () => {
       try {
-        // API: GET /auth/me (no password update API wired yet)
-        const u = await fetchSessionUser(ac.signal)
+        const u = await loadSessionUser(ac.signal)
         if (!ac.signal.aborted) setUser(u)
       } catch {
         const snap = getUserSnapshot()

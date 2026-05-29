@@ -1,6 +1,5 @@
 /**
- * Home balance card — shows total USD from GET /wallet/summary (passed in as props).
- * Quick actions navigate to /deposit, /withdraw, /exchange (frontend routes).
+ * Home balance card — data from src/lib/payloads/wallet.js
  */
 
 import React from 'react'

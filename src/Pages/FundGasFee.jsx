@@ -1,6 +1,5 @@
 /**
- * Fund Gas Fee — QR code + copy for gas-fee funding address.
- * API: GET /wallet/gas-fee-address (fetchFundGasFeeAddress).
+ * Fund Gas Fee — address from src/lib/payloads/deposit.js
  */
 
 import React, { useCallback, useEffect, useState } from 'react'
@@ -8,9 +7,8 @@ import { QRCodeSVG } from 'qrcode.react'
 import { useNavigate } from 'react-router-dom'
 import HomeFooter from '../components/home/HomeFooter.jsx'
 import HomeHeader from '../components/home/HomeHeader.jsx'
-import { fetchFundGasFeeAddress } from '../lib/api/deposit.js'
-import { fetchSessionUser } from '../lib/api/user.js'
-import { getDepositWalletAddress } from '../lib/config.js'
+import { loadGasFeeAddress } from '../lib/payloads/deposit.js'
+import { loadSessionUser } from '../lib/payloads/user.js'
 import { clearSession, getUserSnapshot } from '../lib/session.js'
 
 const FUND_GAS_FEE_NAV_LINKS = [{ to: '/deposit', label: 'Deposit' }]
@@ -52,7 +50,7 @@ export default function FundGasFee() {
   const navigate = useNavigate()
   const [user, setUser] = useState(() => getUserSnapshot() || { displayName: 'Client' })
   const [payload, setPayload] = useState(
-    /** @type {{ address: string; network?: string; label?: string; source: 'api' | 'fallback' } | null} */ (null),
+    /** @type {{ address: string; network?: string; label?: string } | null} */ (null),
   )
   const [loading, setLoading] = useState(true)
   const [copied, setCopied] = useState(false)
@@ -61,8 +59,7 @@ export default function FundGasFee() {
     const ac = new AbortController()
     const run = async () => {
       try {
-        // API: GET /auth/me
-        const u = await fetchSessionUser(ac.signal)
+        const u = await loadSessionUser(ac.signal)
         if (!ac.signal.aborted) setUser(u)
       } catch {
         const snap = getUserSnapshot()
@@ -70,13 +67,8 @@ export default function FundGasFee() {
       }
 
       try {
-        // API: GET /wallet/gas-fee-address
-        const d = await fetchFundGasFeeAddress(ac.signal)
+        const d = await loadGasFeeAddress(ac.signal)
         if (!ac.signal.aborted) setPayload(d)
-      } catch {
-        if (!ac.signal.aborted) {
-          setPayload({ address: getDepositWalletAddress(), source: 'fallback' })
-        }
       } finally {
         if (!ac.signal.aborted) setLoading(false)
       }

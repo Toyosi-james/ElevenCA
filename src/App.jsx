@@ -1,8 +1,6 @@
 /**
- * App shell — maps URL paths (frontend routes) to page components.
- *
- * These are in-browser routes (React Router), NOT backend API paths.
- * Backend APIs are documented in src/lib/config.js and src/lib/api/*.js
+ * App shell — frontend routes only (no backend).
+ * Demo data lives in src/lib/payloads/*.js
  */
 
 import React from 'react'
@@ -24,28 +22,18 @@ const App = () => {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Auth */}
-        <Route path="/login" element={<Login />} /> {/* API: POST /auth/login */}
-
-        {/* Treasury — deposit flows */}
-        <Route path="/deposit" element={<Deposit />} /> {/* Hub only; no API */}
-        <Route path="/deposit/fund-gas-fee" element={<FundGasFee />} /> {/* GET /wallet/gas-fee-address */}
-        <Route path="/deposit/receive-funds" element={<ReceiveFunds />} /> {/* GET /wallet/deposit-address */}
-
-        {/* Treasury — withdraw & exchange */}
-        <Route path="/withdraw" element={<Withdraw />} /> {/* POST /wallet/withdraw */}
-        <Route path="/exchange" element={<Exchange />} /> {/* POST quote + POST execute */}
-
-        {/* Account */}
-        <Route path="/profile" element={<Profile />} /> {/* GET profile (default /auth/me) */}
+        <Route path="/login" element={<Login />} />
+        <Route path="/deposit" element={<Deposit />} />
+        <Route path="/deposit/fund-gas-fee" element={<FundGasFee />} />
+        <Route path="/deposit/receive-funds" element={<ReceiveFunds />} />
+        <Route path="/withdraw" element={<Withdraw />} />
+        <Route path="/exchange" element={<Exchange />} />
+        <Route path="/profile" element={<Profile />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/settings/update-pin" element={<UpdatePin />} />
         <Route path="/settings/update-password" element={<UpdatePassword />} />
-
-        {/* Dashboard */}
-        <Route path="/notifications" element={<Notifications />} /> {/* GET rate-updates */}
-        <Route path="/home" element={<Home />} /> {/* GET me, summary, transactions, flow */}
-
+        <Route path="/notifications" element={<Notifications />} />
+        <Route path="/home" element={<Home />} />
         <Route path="/" element={<Navigate to="/home" replace />} />
         <Route path="*" element={<Navigate to="/home" replace />} />
       </Routes>
