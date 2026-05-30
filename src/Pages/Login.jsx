@@ -2,15 +2,14 @@
  * LOGIN PAGE (/login)
  *
  * Form fields: username, asset PIN, password.
- * Search "BACKEND INTEGRATION" in handleSubmit for POST /api/auth/login wiring.
+ * Auth flow: prefetch CSRF → POST /api/auth/login with CSRF header → store JWT.
  */
 
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { fetchCsrfToken, isAuthenticated, login } from '../api/auth.js'
 
 const BRAND = 'ElevenCA'
-/** Demo session key — replace with real token storage after POST /api/auth/login */
-const SESSION_KEY = 'eleven_user'
 
 const Mark = ({ className }) => (
   <svg
@@ -106,12 +105,27 @@ const Login = () => {
   /** @type {[Record<string, string>, React.Dispatch<React.SetStateAction<Record<string, string>>>]} */
   const [fieldErrors, setFieldErrors] = useState({})
 
-  // If already logged in (demo session), skip to home
+  // Redirect when a JWT is already stored
   useEffect(() => {
-    if (sessionStorage.getItem(SESSION_KEY)) {
+    if (isAuthenticated()) {
       navigate('/home', { replace: true })
     }
   }, [navigate])
+
+  // Bootstrap CSRF cookie before the user submits credentials
+  useEffect(() => {
+    let cancelled = false
+
+    fetchCsrfToken().catch((err) => {
+      if (!cancelled) {
+        setFormError(err instanceof Error ? err.message : 'Unable to start secure session.')
+      }
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   useEffect(() => {
     const previous = document.title
@@ -121,7 +135,7 @@ const Login = () => {
     }
   }, [])
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     setFormError(null)
     setFieldErrors({})
@@ -143,62 +157,20 @@ const Login = () => {
       return
     }
 
-    // --- Payload sent to backend on login (see BACKEND INTEGRATION below) ---
-    const loginPayload = {
-      username: trimmedUser,
-      assetPin: trimmedPin,
-      password,
-    }
+    setLoading(true)
 
-    /*
-     * ┌─────────────────────────────────────────────────────────────────
-     * │ BACKEND INTEGRATION — Authenticate user
-     * ├─────────────────────────────────────────────────────────────────
-     * │ Trigger:  form submit (handleSubmit)
-     * │ Method:   POST
-     * │ URL:      /api/auth/login
-     * │ Headers:  Content-Type: application/json
-     * │ Body:     loginPayload  →  { username, assetPin, password }
-     * │
-     * │ Success response (example):
-     * │   { accessToken: string, user: { displayName, email?, avatarUrl? } }
-     * │
-     * │ On success:
-     * │   1. Store accessToken (localStorage or httpOnly cookie — your choice)
-     * │   2. Store user object in sessionStorage[SESSION_KEY] or app state
-     * │   3. navigate('/home', { replace: true })
-     * │
-     * │ On error (4xx):
-     * │   setFormError('Invalid credentials') or message from response body
-     * │
-     * │ Example:
-     * │   setLoading(true)
-     * │   try {
-     * │     const res = await fetch('/api/auth/login', {
-     * │       method: 'POST',
-     * │       headers: { 'Content-Type': 'application/json' },
-     * │       body: JSON.stringify(loginPayload),
-     * │     })
-     * │     if (!res.ok) throw new Error((await res.json()).message ?? 'Login failed')
-     * │     const { accessToken, user } = await res.json()
-     * │     localStorage.setItem('accessToken', accessToken)
-     * │     sessionStorage.setItem(SESSION_KEY, JSON.stringify(user))
-     * │     navigate('/home', { replace: true })
-     * │   } catch (err) {
-     * │     setFormError(err.message)
-     * │   } finally {
-     * │     setLoading(false)
-     * │   }
-     * │
-     * │ DEMO ONLY below — fake login without calling the server
-     * └─────────────────────────────────────────────────────────────────
-     */
-    // DEMO ONLY — remove these 3 lines when POST /api/auth/login is wired
-    const displayName = trimmedUser
-      .replace(/[._-]+/g, ' ')
-      .replace(/\b\w/g, (c) => c.toUpperCase())
-    sessionStorage.setItem(SESSION_KEY, JSON.stringify({ displayName: displayName || 'Client' }))
-    navigate('/home', { replace: true })
+    try {
+      await login({
+        username: trimmedUser,
+        assetPin: trimmedPin,
+        password,
+      })
+      navigate('/home', { replace: true })
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : 'Login failed. Please try again.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
