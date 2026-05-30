@@ -1,38 +1,39 @@
-/** Update asset PIN — local validation only (no server save). */
+/**
+ * UPDATE PIN PAGE (/settings/update-pin)
+ *
+ * Form: new PIN + confirm. Search "BACKEND INTEGRATION" in handleSubmit.
+ */
 
-import React, { useEffect, useState } from 'react'
+import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import HomeFooter from '../components/home/HomeFooter.jsx'
 import HomeHeader from '../components/home/HomeHeader.jsx'
-import { loadSessionUser } from '../lib/payloads/user.js'
-import { clearSession, getUserSnapshot } from '../lib/session.js'
 
+const SESSION_KEY = 'eleven_user'
 const SETTINGS_NAV_LINKS = [{ to: '/settings', label: 'Settings' }]
+
+function readLoggedInUser() {
+  try {
+    const raw = sessionStorage.getItem(SESSION_KEY)
+    if (raw) return JSON.parse(raw)
+  } catch {
+    /* ignore */
+  }
+  return { displayName: 'Client' }
+}
 
 export default function UpdatePin() {
   const navigate = useNavigate()
-  const [user, setUser] = useState(() => getUserSnapshot() || { displayName: 'Client' })
+  const [user] = useState(readLoggedInUser)
+
+  // --- Form state ---
   const [newPin, setNewPin] = useState('')
   const [confirmPin, setConfirmPin] = useState('')
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
 
-  useEffect(() => {
-    const ac = new AbortController()
-    ;(async () => {
-      try {
-        const u = await loadSessionUser(ac.signal)
-        if (!ac.signal.aborted) setUser(u)
-      } catch {
-        const snap = getUserSnapshot()
-        if (snap && !ac.signal.aborted) setUser(snap)
-      }
-    })()
-    return () => ac.abort()
-  }, [])
-
   const onLogout = () => {
-    clearSession()
+    sessionStorage.removeItem(SESSION_KEY)
     navigate('/login', { replace: true })
   }
 
@@ -41,16 +42,44 @@ export default function UpdatePin() {
     setError('')
     setSuccess('')
 
+    // --- Validation ---
     if (!newPin || !confirmPin) {
       setError('Please fill in both PIN fields.')
       return
     }
-
     if (newPin !== confirmPin) {
       setError('PIN values do not match.')
       return
     }
+    if (newPin.length < 4) {
+      setError('PIN must be at least 4 characters.')
+      return
+    }
 
+    // --- Payload sent to backend (see BACKEND INTEGRATION below) ---
+    const updatePinPayload = {
+      newPin,
+      confirmPin,
+    }
+
+    /*
+     * ┌─────────────────────────────────────────────────────────────────
+     * │ BACKEND INTEGRATION — Update transaction PIN
+     * ├─────────────────────────────────────────────────────────────────
+     * │ Trigger:  form submit (handleSubmit)
+     * │ Method:   PUT
+     * │ URL:      /api/user/pin
+     * │ Auth:     Authorization: Bearer <accessToken>
+     * │ Body:     { pin: updatePinPayload.newPin }
+     * │           (confirmPin is frontend-only validation — do not send)
+     * │
+     * │ Success:  204 No Content or { message: 'PIN updated' }
+     * │ On success: setSuccess('PIN updated successfully'); clear form fields
+     * │ On error:   setError(message from response)
+     * │
+     * │ DEMO ONLY below — shows success without calling the server
+     * └─────────────────────────────────────────────────────────────────
+     */
     setSuccess('PIN updated successfully')
     setNewPin('')
     setConfirmPin('')
@@ -82,21 +111,6 @@ export default function UpdatePin() {
               onSubmit={handleSubmit}
               className="relative w-full max-w-md overflow-hidden rounded-[1.35rem] border border-white/12 bg-slate-elevated/45 p-6 shadow-[0_0_0_1px_rgba(255,255,255,0.05)_inset,0_45px_110px_-55px_rgba(0,0,0,0.92),0_0_90px_-42px_rgba(201,171,122,0.2)] backdrop-blur-2xl sm:p-8"
             >
-              <div
-                className="pointer-events-none absolute -right-24 -top-24 h-56 w-56 rounded-full bg-[radial-gradient(circle_at_center,rgba(201,171,122,0.2),transparent_68%)] blur-3xl"
-                aria-hidden
-              />
-              <div
-                className="pointer-events-none absolute -bottom-24 -left-16 h-44 w-44 rounded-full bg-[radial-gradient(circle_at_center,rgba(34,211,238,0.13),transparent_72%)] blur-3xl"
-                aria-hidden
-              />
-              <div className="relative space-y-2 pb-5">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-aurum/85">Credential Update</p>
-                <h2 className="font-serif text-[1.5rem] tracking-tight text-pearl sm:text-[1.7rem]">Create a new pin</h2>
-                <p className="max-w-sm text-[13px] leading-relaxed text-mist/80">
-                  Choose a secure PIN known only to you and avoid easy patterns.
-                </p>
-              </div>
               <div className="relative space-y-4">
                 <div className="space-y-2">
                   <label htmlFor="new-pin" className="block text-[10px] font-semibold uppercase tracking-[0.24em] text-mist">
@@ -131,9 +145,7 @@ export default function UpdatePin() {
                 ) : null}
 
                 {success ? (
-                  <p className="rounded-xl border border-emerald-500/30 bg-emerald-500/9 px-4 py-3 text-[13px] text-emerald-100">
-                    {success}
-                  </p>
+                  <p className="rounded-xl border border-emerald-500/30 bg-emerald-500/9 px-4 py-3 text-[13px] text-emerald-100">{success}</p>
                 ) : null}
 
                 <button

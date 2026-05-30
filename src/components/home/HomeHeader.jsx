@@ -1,6 +1,8 @@
 /**
- * Top bar on dashboard-style pages: greeting, nav links, profile / notifications / settings / logout.
- * Logout clears sessionStorage and sends user to /login.
+ * Top bar on dashboard-style pages: greeting, nav, profile / notifications / settings / logout.
+ *
+ * Props `displayName` and `avatarUrl` come from GET /api/auth/me (see Home.jsx and each page).
+ * Logout: parent passes onLogout — typically POST /api/auth/logout then clear sessionStorage.
  */
 
 import React from 'react'

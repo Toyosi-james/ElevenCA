@@ -1,14 +1,16 @@
 /**
- * Login screen — demo auth via src/lib/payloads/auth.js
+ * LOGIN PAGE (/login)
+ *
+ * Form fields: username, asset PIN, password.
+ * Search "BACKEND INTEGRATION" in handleSubmit for POST /api/auth/login wiring.
  */
 
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { signIn } from '../lib/payloads/auth.js'
-import { getPasswordResetUrl, getPostLoginRedirect } from '../lib/config.js'
-import { isLoggedIn } from '../lib/session.js'
 
 const BRAND = 'ElevenCA'
+/** Demo session key — replace with real token storage after POST /api/auth/login */
+const SESSION_KEY = 'eleven_user'
 
 const Mark = ({ className }) => (
   <svg
@@ -92,6 +94,7 @@ const Spinner = () => (
 
 const Login = () => {
   const navigate = useNavigate()
+  // --- Form state → assembled into loginPayload on submit ---
   const [assetPin, setAssetPin] = useState('')
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
@@ -102,15 +105,11 @@ const Login = () => {
   const [formError, setFormError] = useState(null)
   /** @type {[Record<string, string>, React.Dispatch<React.SetStateAction<Record<string, string>>>]} */
   const [fieldErrors, setFieldErrors] = useState({})
-  const abortRef = useRef(/** @type {AbortController | null} */ (null))
 
+  // If already logged in (demo session), skip to home
   useEffect(() => {
-    return () => abortRef.current?.abort()
-  }, [])
-
-  useEffect(() => {
-    if (isLoggedIn()) {
-      navigate(getPostLoginRedirect(), { replace: true })
+    if (sessionStorage.getItem(SESSION_KEY)) {
+      navigate('/home', { replace: true })
     }
   }, [navigate])
 
@@ -122,15 +121,15 @@ const Login = () => {
     }
   }, [])
 
-  const resetUrl = getPasswordResetUrl()
-
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault()
     setFormError(null)
     setFieldErrors({})
 
     const trimmedPin = assetPin.trim()
     const trimmedUser = username.trim()
+
+    // --- Validation ---
     if (!trimmedUser) {
       setFieldErrors((prev) => ({ ...prev, username: 'Username is required.' }))
       return
@@ -144,25 +143,62 @@ const Login = () => {
       return
     }
 
-    abortRef.current?.abort()
-    const ac = new AbortController()
-    abortRef.current = ac
-
-    setLoading(true)
-    try {
-      await signIn({
-        assetPin: trimmedPin,
-        username: trimmedUser,
-        password,
-        signal: ac.signal,
-      })
-      navigate(getPostLoginRedirect(), { replace: true })
-    } catch (err) {
-      if (err instanceof DOMException && err.name === 'AbortError') return
-      setFormError(err instanceof Error ? err.message : 'Something went wrong. Please try again.')
-    } finally {
-      setLoading(false)
+    // --- Payload sent to backend on login (see BACKEND INTEGRATION below) ---
+    const loginPayload = {
+      username: trimmedUser,
+      assetPin: trimmedPin,
+      password,
     }
+
+    /*
+     * ┌─────────────────────────────────────────────────────────────────
+     * │ BACKEND INTEGRATION — Authenticate user
+     * ├─────────────────────────────────────────────────────────────────
+     * │ Trigger:  form submit (handleSubmit)
+     * │ Method:   POST
+     * │ URL:      /api/auth/login
+     * │ Headers:  Content-Type: application/json
+     * │ Body:     loginPayload  →  { username, assetPin, password }
+     * │
+     * │ Success response (example):
+     * │   { accessToken: string, user: { displayName, email?, avatarUrl? } }
+     * │
+     * │ On success:
+     * │   1. Store accessToken (localStorage or httpOnly cookie — your choice)
+     * │   2. Store user object in sessionStorage[SESSION_KEY] or app state
+     * │   3. navigate('/home', { replace: true })
+     * │
+     * │ On error (4xx):
+     * │   setFormError('Invalid credentials') or message from response body
+     * │
+     * │ Example:
+     * │   setLoading(true)
+     * │   try {
+     * │     const res = await fetch('/api/auth/login', {
+     * │       method: 'POST',
+     * │       headers: { 'Content-Type': 'application/json' },
+     * │       body: JSON.stringify(loginPayload),
+     * │     })
+     * │     if (!res.ok) throw new Error((await res.json()).message ?? 'Login failed')
+     * │     const { accessToken, user } = await res.json()
+     * │     localStorage.setItem('accessToken', accessToken)
+     * │     sessionStorage.setItem(SESSION_KEY, JSON.stringify(user))
+     * │     navigate('/home', { replace: true })
+     * │   } catch (err) {
+     * │     setFormError(err.message)
+     * │   } finally {
+     * │     setLoading(false)
+     * │   }
+     * │
+     * │ DEMO ONLY below — fake login without calling the server
+     * └─────────────────────────────────────────────────────────────────
+     */
+    // DEMO ONLY — remove these 3 lines when POST /api/auth/login is wired
+    const displayName = trimmedUser
+      .replace(/[._-]+/g, ' ')
+      .replace(/\b\w/g, (c) => c.toUpperCase())
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify({ displayName: displayName || 'Client' }))
+    navigate('/home', { replace: true })
   }
 
   return (
@@ -375,8 +411,8 @@ const Login = () => {
 
               <p className="pt-1 text-center">
                 <a
-                  href={resetUrl || '#'}
-                  onClick={resetUrl ? undefined : (ev) => ev.preventDefault()}
+                  href="#"
+                  onClick={(ev) => ev.preventDefault()}
                   className="text-[12px] font-medium tracking-wide text-mist/85 underline-offset-4 transition hover:text-aurum hover:underline"
                 >
                   Forgot password

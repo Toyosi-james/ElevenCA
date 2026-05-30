@@ -1,18 +1,29 @@
 /**
- * Withdraw screen — uses src/lib/payloads/withdraw.js
+ * WITHDRAW PAGE (/withdraw)
+ *
+ * Form: destination wallet address + gas fee percentage.
+ * Search "BACKEND INTEGRATION" in onWithdraw for POST /api/wallet/withdraw.
  */
 
-import React, { useEffect, useMemo, useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import HomeFooter from '../components/home/HomeFooter.jsx'
 import HomeHeader from '../components/home/HomeHeader.jsx'
-import { OVERVIEW_NAV_LINKS } from '../lib/appNav.js'
-import { loadSessionUser } from '../lib/payloads/user.js'
-import { submitWithdrawRequest } from '../lib/payloads/withdraw.js'
-import { clearSession, getUserSnapshot } from '../lib/session.js'
 
+const SESSION_KEY = 'eleven_user'
+/** DEMO ONLY — total gas fee in USD. BACKEND: may come from GET /api/wallet/withdraw/fees or in POST response */
 const GAS_FEE_TOTAL = 5800
 const FEE_OPTIONS = [25, 50, 75, 100]
+
+function readLoggedInUser() {
+  try {
+    const raw = sessionStorage.getItem(SESSION_KEY)
+    if (raw) return JSON.parse(raw)
+  } catch {
+    /* ignore */
+  }
+  return { displayName: 'Client' }
+}
 
 const fmtUsd = new Intl.NumberFormat('en-US', {
   style: 'currency',
@@ -23,47 +34,31 @@ const fmtUsd = new Intl.NumberFormat('en-US', {
 
 export default function Withdraw() {
   const navigate = useNavigate()
-  const [user, setUser] = useState(() => getUserSnapshot() || { displayName: 'Client' })
+  const [user] = useState(readLoggedInUser)
+
+  // --- Form state ---
   const [walletAddress, setWalletAddress] = useState('')
-  const [selectedPct, setSelectedPct] = useState(/** @type {number | null} */ (null))
+  const [selectedPct, setSelectedPct] = useState(null)
   const [error, setError] = useState('')
   const [showAlert, setShowAlert] = useState(false)
-  const [submitting, setSubmitting] = useState(false)
   const [alertFeeAmount, setAlertFeeAmount] = useState(0)
-  const [requestId, setRequestId] = useState(/** @type {string | null} */ (null))
-
-  useEffect(() => {
-    const ac = new AbortController()
-    ;(async () => {
-      try {
-        const u = await loadSessionUser(ac.signal)
-        if (!ac.signal.aborted) setUser(u)
-      } catch {
-        const snap = getUserSnapshot()
-        if (snap && !ac.signal.aborted) setUser(snap)
-      }
-    })()
-    return () => ac.abort()
-  }, [])
-
-  const onLogout = () => {
-    clearSession()
-    navigate('/login', { replace: true })
-  }
+  const [requestId, setRequestId] = useState(null)
 
   const feeAmount = useMemo(() => {
     if (selectedPct == null) return 0
     return (GAS_FEE_TOTAL * selectedPct) / 100
   }, [selectedPct])
 
-  const selectedAmount = useMemo(() => {
-    if (selectedPct == null) return 0
-    return (GAS_FEE_TOTAL * selectedPct) / 100
-  }, [selectedPct])
+  const onLogout = () => {
+    sessionStorage.removeItem(SESSION_KEY)
+    navigate('/login', { replace: true })
+  }
 
-  const onWithdraw = async () => {
+  const onWithdraw = () => {
     setError('')
     setRequestId(null)
+
+    // --- Validation ---
     if (!walletAddress.trim()) {
       setError('Please enter a wallet address.')
       return
@@ -73,22 +68,41 @@ export default function Withdraw() {
       return
     }
 
-    const ac = new AbortController()
-    setSubmitting(true)
-    try {
-      const res = await submitWithdrawRequest(ac.signal, {
-        walletAddress: walletAddress.trim(),
-        gasFeePercent: selectedPct,
-        gasFeeTotalUsd: GAS_FEE_TOTAL,
-      })
-      setAlertFeeAmount(res.requiredGasFeeUsd)
-      setRequestId(res.requestId)
-      setShowAlert(true)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Unable to process withdrawal request right now.')
-    } finally {
-      setSubmitting(false)
+    // --- Payload sent to backend (see BACKEND INTEGRATION below) ---
+    const withdrawPayload = {
+      walletAddress: walletAddress.trim(),
+      gasFeePercent: selectedPct,
+      gasFeeTotalUsd: GAS_FEE_TOTAL,
     }
+
+    /*
+     * ┌─────────────────────────────────────────────────────────────────
+     * │ BACKEND INTEGRATION — Submit withdrawal request
+     * ├─────────────────────────────────────────────────────────────────
+     * │ Trigger:  Withdraw button click (onWithdraw)
+     * │ Method:   POST
+     * │ URL:      /api/wallet/withdraw
+     * │ Auth:     Authorization: Bearer <accessToken>
+     * │ Body:     withdrawPayload  →  { walletAddress, gasFeePercent, gasFeeTotalUsd }
+     * │
+     * │ Success response (example):
+     * │   { requestId: string, requiredGasFeeUsd: number, status: 'pending_gas' }
+     * │
+     * │ On success:
+     * │   setAlertFeeAmount(data.requiredGasFeeUsd)
+     * │   setRequestId(data.requestId)
+     * │   setShowAlert(true)   // modal prompts user to fund gas fee
+     * │
+     * │ On error: setError(message from response)
+     * │
+     * │ Related page: /deposit/fund-gas-fee (GET /api/wallet/gas-fee-address)
+     * │
+     * │ DEMO ONLY below — computes fee locally, no server call
+     * └─────────────────────────────────────────────────────────────────
+     */
+    setAlertFeeAmount((GAS_FEE_TOTAL * selectedPct) / 100)
+    setRequestId(`wd-demo-${Date.now()}`)
+    setShowAlert(true)
   }
 
   return (
@@ -104,7 +118,7 @@ export default function Withdraw() {
           displayName={user.displayName}
           avatarUrl={user.avatarUrl}
           onLogout={onLogout}
-          navLinks={OVERVIEW_NAV_LINKS}
+          navLinks={[{ to: '/home', label: 'Overview' }]}
           showActions={false}
         />
 
@@ -120,24 +134,7 @@ export default function Withdraw() {
 
           <section className="mx-auto flex min-h-[54vh] max-w-xl items-center justify-center">
             <div className="relative w-full max-w-md overflow-hidden rounded-[1.35rem] border border-white/12 bg-slate-elevated/45 p-6 shadow-[0_0_0_1px_rgba(255,255,255,0.05)_inset,0_45px_110px_-55px_rgba(0,0,0,0.92),0_0_90px_-42px_rgba(201,171,122,0.2)] backdrop-blur-2xl sm:p-8">
-              <div
-                className="pointer-events-none absolute -right-24 -top-24 h-56 w-56 rounded-full bg-[radial-gradient(circle_at_center,rgba(201,171,122,0.2),transparent_68%)] blur-3xl"
-                aria-hidden
-              />
-              <div
-                className="pointer-events-none absolute -bottom-24 -left-16 h-44 w-44 rounded-full bg-[radial-gradient(circle_at_center,rgba(34,211,238,0.13),transparent_72%)] blur-3xl"
-                aria-hidden
-              />
-
               <div className="relative space-y-5">
-                <div className="space-y-2 pb-1">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.3em] text-aurum/85">Withdrawal Request</p>
-                  <h2 className="font-serif text-[1.45rem] tracking-tight text-pearl sm:text-[1.65rem]">Secure transfer setup</h2>
-                  <p className="max-w-sm text-[13px] leading-relaxed text-mist/80">
-                    Enter your destination address and choose your gas fee allocation before continuing.
-                  </p>
-                </div>
-
                 <div className="space-y-2">
                   <label htmlFor="withdraw-wallet-address" className="block text-[10px] font-semibold uppercase tracking-[0.24em] text-mist">
                     Wallet address
@@ -182,10 +179,9 @@ export default function Withdraw() {
                 <button
                   type="button"
                   onClick={onWithdraw}
-                  disabled={submitting}
-                  className="w-full rounded-xl border border-transparent bg-[linear-gradient(180deg,var(--color-aurum)_0%,var(--color-aurum-muted)_100%)] px-5 py-3.5 text-[11px] font-semibold uppercase tracking-[0.2em] text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.24),0_16px_46px_-18px_rgba(201,171,122,0.4)] transition hover:brightness-[1.08] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-aurum/70 disabled:cursor-not-allowed disabled:opacity-60"
+                  className="w-full rounded-xl border border-transparent bg-[linear-gradient(180deg,var(--color-aurum)_0%,var(--color-aurum-muted)_100%)] px-5 py-3.5 text-[11px] font-semibold uppercase tracking-[0.2em] text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.24),0_16px_46px_-18px_rgba(201,171,122,0.4)] transition hover:brightness-[1.08] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-aurum/70"
                 >
-                  {submitting ? 'Processing...' : 'Withdraw'}
+                  Withdraw
                 </button>
               </div>
             </div>
@@ -202,26 +198,12 @@ export default function Withdraw() {
               To withdraw pay the required gas fee of{' '}
               <span className="font-semibold text-aurum">{fmtUsd.format(alertFeeAmount || feeAmount)}</span>.
             </p>
-            {requestId ? (
-              <p className="mt-2 text-[12px] text-mist/80">Request ID: {requestId}</p>
-            ) : null}
+            {requestId ? <p className="mt-2 text-[12px] text-mist/80">Request ID: {requestId}</p> : null}
             <div className="mt-5 flex justify-end gap-3">
-              <button
-                type="button"
-                onClick={() => setShowAlert(false)}
-                className="rounded-lg border border-white/15 bg-white/4 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-mist transition hover:bg-white/8"
-              >
+              <button type="button" onClick={() => setShowAlert(false)} className="rounded-lg border border-white/15 bg-white/4 px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-mist transition hover:bg-white/8">
                 Close
               </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowAlert(false)
-                  // Route users directly to the dedicated gas-fee funding screen.
-                  navigate('/deposit/fund-gas-fee')
-                }}
-                className="rounded-lg border border-transparent bg-[linear-gradient(180deg,var(--color-aurum)_0%,var(--color-aurum-muted)_100%)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.2)] transition hover:brightness-[1.08]"
-              >
+              <button type="button" onClick={() => { setShowAlert(false); navigate('/deposit/fund-gas-fee') }} className="rounded-lg border border-transparent bg-[linear-gradient(180deg,var(--color-aurum)_0%,var(--color-aurum-muted)_100%)] px-4 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.2)] transition hover:brightness-[1.08]">
                 Fund Gas Fees
               </button>
             </div>

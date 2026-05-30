@@ -1,5 +1,10 @@
 /**
- * Market flow chart — data from src/lib/payloads/marketFlow.js
+ * Market flow chart — presentational only; parent passes GET /api/markets/flow data.
+ *
+ * Expected props:
+ *   points: [{ label: string, btc: number, eth: number, sol: number }]  — from API
+ *   range: '1d' | '7d' | '30d'  — parent re-fetches when user changes range
+ *   onRangeChange(range)        — wire to GET /api/markets/flow?range=
  */
 
 import React, { useMemo } from 'react'

@@ -1,6 +1,6 @@
 /**
  * App entry point — mounts React into #root and loads global styles.
- * Routing and pages live in App.jsx.
+ * Routing: App.jsx (includes full API endpoint map — search "BACKEND INTEGRATION").
  */
 
 import { StrictMode } from 'react'

@@ -1,17 +1,74 @@
 /**
- * Notifications — data from src/lib/payloads/notifications.js
+ * NOTIFICATIONS PAGE (/notifications)
+ *
+ * Rate-update alerts list. Search "BACKEND INTEGRATION" for GET endpoint.
  */
 
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import HomeFooter from '../components/home/HomeFooter.jsx'
 import HomeHeader from '../components/home/HomeHeader.jsx'
-import { OVERVIEW_NAV_LINKS } from '../lib/appNav.js'
-import { formatNotificationTime, loadRateUpdateNotifications } from '../lib/payloads/notifications.js'
-import { loadSessionUser } from '../lib/payloads/user.js'
-import { clearSession, getUserSnapshot } from '../lib/session.js'
 
-/** @typedef {import('../lib/payloads/notifications.js').RateUpdateNotification} RateUpdateNotification */
+const SESSION_KEY = 'eleven_user'
+
+function readLoggedInUser() {
+  try {
+    const raw = sessionStorage.getItem(SESSION_KEY)
+    if (raw) return JSON.parse(raw)
+  } catch {
+    /* ignore */
+  }
+  return { displayName: 'Client' }
+}
+
+function formatNotificationTime(ms) {
+  const d = Math.floor((Date.now() - ms) / 60000)
+  if (d < 1) return 'Just now'
+  if (d < 60) return `${d}m ago`
+  const h = Math.floor(d / 60)
+  if (h < 48) return `${h}h ago`
+  return `${Math.floor(h / 24)}d ago`
+}
+
+/**
+ * DEMO ONLY — notification cards.
+ * BACKEND: GET /api/wallet/notifications/rate-updates
+ * Response: { items: [{ id, pair, headline, body, changePct, occurredAt }] }
+ */
+const SAMPLE_NOTIFICATIONS = [
+  {
+    id: '1',
+    pair: 'BTC / USD',
+    headline: 'Reference rate refreshed',
+    body: 'Venue mid moved +0.42% vs. prior print.',
+    changePct: 0.42,
+    occurredAt: Date.now() - 4 * 60 * 1000,
+  },
+  {
+    id: '2',
+    pair: 'ETH / USD',
+    headline: 'Reference rate refreshed',
+    body: 'Mid-rate down −0.18% after liquidity sweep.',
+    changePct: -0.18,
+    occurredAt: Date.now() - 38 * 60 * 1000,
+  },
+  {
+    id: '3',
+    pair: 'SOL / USDT',
+    headline: 'Reference rate refreshed',
+    body: 'Oracle consensus ticked +0.91%.',
+    changePct: 0.91,
+    occurredAt: Date.now() - 2 * 60 * 60 * 1000,
+  },
+  {
+    id: '4',
+    pair: 'XRP / USD',
+    headline: 'Reference rate refreshed',
+    body: 'Flat session: mid unchanged within 0.02%.',
+    changePct: 0.02,
+    occurredAt: Date.now() - 5 * 60 * 60 * 1000,
+  },
+]
 
 function NotificationCard({ n }) {
   const up = n.changePct > 0
@@ -49,51 +106,29 @@ function NotificationCard({ n }) {
 
 export default function Notifications() {
   const navigate = useNavigate()
-  const [user, setUser] = useState(() => getUserSnapshot() || { displayName: 'Client' })
-  const [items, setItems] = useState(/** @type {RateUpdateNotification[]} */ ([]))
-  const [loading, setLoading] = useState(true)
+  const [user] = useState(readLoggedInUser)
+  const [items] = useState(SAMPLE_NOTIFICATIONS)
 
-  const load = useCallback(async (signal) => {
-    setLoading(true)
-    try {
-      const { items: next } = await loadRateUpdateNotifications(signal)
-      if (signal.aborted) return
-      setItems(next)
-    } catch (e) {
-      if (signal.aborted || (e instanceof DOMException && e.name === 'AbortError')) return
-    } finally {
-      if (!signal.aborted) setLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    const ac = new AbortController()
-    void load(ac.signal)
-    return () => ac.abort()
-  }, [load])
-
-  useEffect(() => {
-    const ac = new AbortController()
-    ;(async () => {
-      try {
-        const u = await loadSessionUser(ac.signal)
-        if (!ac.signal.aborted) setUser(u)
-      } catch {
-        const snap = getUserSnapshot()
-        if (snap && !ac.signal.aborted) setUser(snap)
-      }
-    })()
-    return () => ac.abort()
-  }, [])
+  /*
+   * ┌─────────────────────────────────────────────────────────────────
+   * │ BACKEND INTEGRATION — Load rate-update notifications
+   * ├─────────────────────────────────────────────────────────────────
+   * │ Trigger:  page mount (useEffect) — optional pull-to-refresh later
+   * │ Method:   GET
+   * │ URL:      /api/wallet/notifications/rate-updates
+   * │ Auth:     Authorization: Bearer <accessToken>
+   * │
+   * │ Response: { items: [{ id, pair, headline, body, changePct, occurredAt }] }
+   * │   occurredAt = Unix ms timestamp (used by formatNotificationTime)
+   * │
+   * │ Wire to: setItems(data.items)
+   * │ DEMO ONLY: SAMPLE_NOTIFICATIONS used as initial state
+   * └─────────────────────────────────────────────────────────────────
+   */
 
   const onLogout = () => {
-    clearSession()
+    sessionStorage.removeItem(SESSION_KEY)
     navigate('/login', { replace: true })
-  }
-
-  const onRefresh = () => {
-    const ac = new AbortController()
-    void load(ac.signal)
   }
 
   return (
@@ -109,7 +144,7 @@ export default function Notifications() {
           displayName={user.displayName}
           avatarUrl={user.avatarUrl}
           onLogout={onLogout}
-          navLinks={OVERVIEW_NAV_LINKS}
+          navLinks={[{ to: '/home', label: 'Overview' }]}
           showActions={false}
         />
 
@@ -120,35 +155,11 @@ export default function Notifications() {
             <p className="mx-auto mt-3 max-w-xl text-[14px] font-light leading-relaxed text-mist/90">
               Rate updates and pricing notices for your watched pairs.
             </p>
-            <div className="mx-auto mt-6 h-px w-full max-w-sm bg-[linear-gradient(90deg,transparent,rgba(201,171,122,0.45),transparent)]" />
           </header>
 
           <section className="mx-auto mt-10 max-w-2xl">
-            <div className="mb-6 flex items-center justify-between gap-4">
-              <p className="text-[12px] text-mist/75">{items.length} notification{items.length === 1 ? '' : 's'}</p>
-              <button
-                type="button"
-                onClick={onRefresh}
-                disabled={loading}
-                className="rounded-lg border border-white/12 bg-white/[0.04] px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.14em] text-mist transition hover:bg-white/[0.08] hover:text-pearl disabled:opacity-50"
-              >
-                Refresh
-              </button>
-            </div>
-
-            {loading && items.length === 0 ? (
-              <ul className="space-y-4">
-                {[1, 2, 3].map((i) => (
-                  <li key={i} className="h-40 animate-pulse rounded-2xl border border-white/[0.06] bg-white/[0.03]" />
-                ))}
-              </ul>
-            ) : items.length === 0 ? (
-              <p className="rounded-2xl border border-white/10 bg-slate-elevated/40 px-6 py-12 text-center text-[14px] text-mist/80">
-                No notifications yet.
-              </p>
-            ) : (
-              <ul className="space-y-4">{items.map((n) => <NotificationCard key={n.id} n={n} />)}</ul>
-            )}
+            <p className="mb-6 text-[12px] text-mist/75">{items.length} notifications (sample data)</p>
+            <ul className="space-y-4">{items.map((n) => <NotificationCard key={n.id} n={n} />)}</ul>
           </section>
         </main>
 

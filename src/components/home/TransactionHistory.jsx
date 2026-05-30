@@ -1,5 +1,18 @@
 /**
- * Paginated transaction list — data from src/lib/payloads/transactions.js
+ * Transaction history table — UI ONLY (no fetch here).
+ *
+ * ┌─ WHERE TO WIRE THE API ─────────────────────────────────────────────
+ * │  File:  src/Pages/Home.jsx  (NOT this file)
+ * │  Search Home.jsx for:  "BACKEND INTEGRATION — Transaction history"
+ * │
+ * │  Endpoint: GET /api/wallet/transactions?page=&limit=
+ * │  Parent passes the response as props below.
+ * └──────────────────────────────────────────────────────────────────────
+ *
+ * Expected props from API response:
+ *   items: [{ id, title, amount, currency, direction: 'in'|'out', status, occurredAt, reference? }]
+ *   page, pageSize, total, totalPages, hasNextPage
+ *   onPageChange(nextPage) — Home.jsx re-fetches when user clicks Next/Prev
  */
 
 import React from 'react'

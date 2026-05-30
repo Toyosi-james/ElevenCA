@@ -1,5 +1,10 @@
 /**
- * Home balance card — data from src/lib/payloads/wallet.js
+ * Home balance card — presentational only; parent passes data from GET /api/wallet/summary.
+ *
+ * Expected props from API response:
+ *   totalUsd: number       — total portfolio value in USD
+ *   change24hPct: number   — 24h change percentage (e.g. 1.24 = +1.24%)
+ *   currency: string        — display currency code (e.g. 'USD')
  */
 
 import React from 'react'

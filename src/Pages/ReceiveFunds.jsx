@@ -1,17 +1,53 @@
 /**
- * Receive Funds — deposit address from src/lib/payloads/deposit.js
+ * RECEIVE FUNDS PAGE (/deposit/receive-funds)
+ *
+ * Shows QR code + deposit wallet address.
+ * Search "BACKEND INTEGRATION" for GET /api/wallet/deposit-address.
  */
 
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useState } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
 import { useNavigate } from 'react-router-dom'
 import HomeFooter from '../components/home/HomeFooter.jsx'
 import HomeHeader from '../components/home/HomeHeader.jsx'
-import { loadDepositAddress } from '../lib/payloads/deposit.js'
-import { loadSessionUser } from '../lib/payloads/user.js'
-import { clearSession, getUserSnapshot } from '../lib/session.js'
 
+const SESSION_KEY = 'eleven_user'
 const RECEIVE_FUNDS_NAV_LINKS = [{ to: '/deposit', label: 'Deposit' }]
+
+// Optional .env override for demos: VITE_DEPOSIT_WALLET_ADDRESS=0x...
+const envAddress = import.meta.env.VITE_DEPOSIT_WALLET_ADDRESS
+const DEFAULT_WALLET = '0x71C7656EC7ab88b098defB751B7401B5f6d8976F'
+
+/*
+ * ┌─────────────────────────────────────────────────────────────────
+ * │ BACKEND INTEGRATION — Deposit receiving address
+ * ├─────────────────────────────────────────────────────────────────
+ * │ Trigger:  page mount (useEffect)
+ * │ Method:   GET
+ * │ URL:      /api/wallet/deposit-address
+ * │ Auth:     Authorization: Bearer <accessToken>
+ * │
+ * │ Response: { address: string, network: string, label: string }
+ * │ Wire to:  setDepositInfo(data) — replace SAMPLE_DEPOSIT_ADDRESS below
+ * │
+ * │ DEMO ONLY: hardcoded SAMPLE_DEPOSIT_ADDRESS (or VITE_DEPOSIT_WALLET_ADDRESS)
+ * └─────────────────────────────────────────────────────────────────
+ */
+const SAMPLE_DEPOSIT_ADDRESS = {
+  address: envAddress && String(envAddress).trim() !== '' ? String(envAddress).trim() : DEFAULT_WALLET,
+  network: 'Ethereum',
+  label: 'Vault receiving address',
+}
+
+function readLoggedInUser() {
+  try {
+    const raw = sessionStorage.getItem(SESSION_KEY)
+    if (raw) return JSON.parse(raw)
+  } catch {
+    /* ignore */
+  }
+  return { displayName: 'Client' }
+}
 
 const IconCopy = () => (
   <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden>
@@ -25,69 +61,43 @@ const IconCheck = () => (
   </svg>
 )
 
-async function copyToClipboard(text) {
+function copyToClipboard(text) {
+  if (navigator.clipboard?.writeText) {
+    return navigator.clipboard.writeText(text).then(() => true).catch(() => false)
+  }
   try {
-    await navigator.clipboard.writeText(text)
-    return true
+    const ta = document.createElement('textarea')
+    ta.value = text
+    ta.style.position = 'fixed'
+    ta.style.left = '-9999px'
+    document.body.appendChild(ta)
+    ta.select()
+    const ok = document.execCommand('copy')
+    document.body.removeChild(ta)
+    return Promise.resolve(ok)
   } catch {
-    try {
-      const ta = document.createElement('textarea')
-      ta.value = text
-      ta.style.position = 'fixed'
-      ta.style.left = '-9999px'
-      document.body.appendChild(ta)
-      ta.select()
-      const ok = document.execCommand('copy')
-      document.body.removeChild(ta)
-      return ok
-    } catch {
-      return false
-    }
+    return Promise.resolve(false)
   }
 }
 
 export default function ReceiveFunds() {
   const navigate = useNavigate()
-  const [user, setUser] = useState(() => getUserSnapshot() || { displayName: 'Client' })
-  const [payload, setPayload] = useState(
-    /** @type {{ address: string; network?: string; label?: string } | null} */ (null),
-  )
-  const [loading, setLoading] = useState(true)
+  const [user] = useState(readLoggedInUser)
   const [copied, setCopied] = useState(false)
 
-  useEffect(() => {
-    const ac = new AbortController()
-    const run = async () => {
-      try {
-        const u = await loadSessionUser(ac.signal)
-        if (!ac.signal.aborted) setUser(u)
-      } catch {
-        const snap = getUserSnapshot()
-        if (snap && !ac.signal.aborted) setUser(snap)
-      }
+  const address = SAMPLE_DEPOSIT_ADDRESS.address
 
-      try {
-        const d = await loadDepositAddress(ac.signal)
-        if (!ac.signal.aborted) setPayload(d)
-      } finally {
-        if (!ac.signal.aborted) setLoading(false)
-      }
-    }
-    run()
-    return () => ac.abort()
-  }, [])
-
-  const address = payload?.address ?? ''
-  const handleCopy = useCallback(async () => {
+  const handleCopy = () => {
     if (!address) return
-    const ok = await copyToClipboard(address)
-    if (!ok) return
-    setCopied(true)
-    window.setTimeout(() => setCopied(false), 2200)
-  }, [address])
+    copyToClipboard(address).then((ok) => {
+      if (!ok) return
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 2200)
+    })
+  }
 
   const onLogout = () => {
-    clearSession()
+    sessionStorage.removeItem(SESSION_KEY)
     navigate('/login', { replace: true })
   }
 
@@ -100,110 +110,53 @@ export default function ReceiveFunds() {
       </div>
 
       <div className="relative z-10 flex min-h-screen flex-col">
-        <HomeHeader
-          displayName={user.displayName}
-          avatarUrl={user.avatarUrl}
-          onLogout={onLogout}
-          navLinks={RECEIVE_FUNDS_NAV_LINKS}
-          showActions={false}
-        />
+        <HomeHeader displayName={user.displayName} avatarUrl={user.avatarUrl} onLogout={onLogout} navLinks={RECEIVE_FUNDS_NAV_LINKS} showActions={false} />
 
         <main className="w-full flex-1 px-4 pb-10 pt-14 sm:px-6 sm:pb-12 sm:pt-17 lg:px-10 lg:pt-20 xl:px-14">
           <div className="mx-auto max-w-lg">
             <div className="mb-10 text-center sm:mb-12">
               <p className="text-[10px] font-semibold uppercase tracking-[0.34em] text-aurum/90">Treasury</p>
-              <h1 className="mt-3 font-serif text-[2rem] font-medium tracking-tight text-pearl sm:text-[2.35rem]">
-                Receive funds
-              </h1>
+              <h1 className="mt-3 font-serif text-[2rem] font-medium tracking-tight text-pearl sm:text-[2.35rem]">Receive funds</h1>
               <p className="mx-auto mt-4 max-w-md text-[14px] font-light leading-relaxed text-mist/90">
                 Your dedicated receiving address. Scan to capture the full string, or copy for manual transfer.
               </p>
             </div>
 
             <section className="relative overflow-hidden rounded-[1.35rem] border border-white/10 bg-slate-elevated/45 p-px shadow-[0_0_0_1px_rgba(255,255,255,0.05)_inset,0_50px_120px_-50px_rgba(0,0,0,0.82),0_0_120px_-48px_rgba(201,171,122,0.14)] backdrop-blur-2xl">
-              <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(201,171,122,0.55),transparent)] opacity-90" aria-hidden />
-              <div className="pointer-events-none absolute left-0 top-0 h-32 w-px bg-[linear-gradient(180deg,rgba(201,171,122,0.5),transparent)] opacity-60" aria-hidden />
-
               <div className="relative overflow-hidden rounded-[calc(1.35rem-1px)] bg-[linear-gradient(155deg,rgba(255,255,255,0.055)_0%,transparent_40%,rgba(201,171,122,0.05)_100%)] px-6 py-10 sm:px-10 sm:py-12">
-                <div
-                  className="pointer-events-none absolute -right-24 top-0 h-56 w-56 rounded-full bg-[radial-gradient(circle_at_center,rgba(201,171,122,0.14),transparent_68%)] blur-3xl"
-                  aria-hidden
-                />
-                <div
-                  className="pointer-events-none absolute -bottom-20 -left-20 h-48 w-48 rounded-full bg-[radial-gradient(circle_at_center,rgba(95,115,175,0.1),transparent_70%)] blur-3xl"
-                  aria-hidden
-                />
-
                 <div className="relative flex flex-col items-center">
-                  {(payload?.network || payload?.label) && !loading ? (
-                    <div className="mb-6 flex flex-wrap justify-center gap-2">
-                      {payload.network ? (
-                        <span className="rounded-full border border-white/10 bg-white/4 px-3 py-1 font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-frost/90">
-                          {payload.network}
-                        </span>
-                      ) : null}
-                      {payload.label ? (
-                        <span className="rounded-full border border-aurum/25 bg-aurum/6 px-3 py-1 text-[10px] font-medium uppercase tracking-[0.18em] text-aurum/95">
-                          {payload.label}
-                        </span>
-                      ) : null}
-                    </div>
-                  ) : null}
-
-                  <div className="relative">
-                    <div className="absolute -inset-3 rounded-[1.75rem] bg-[linear-gradient(135deg,rgba(201,171,122,0.35),rgba(255,255,255,0.08)_45%,rgba(201,171,122,0.2))] opacity-80 blur-sm" aria-hidden />
-                    <div className="relative rounded-[1.35rem] border border-white/20 bg-white p-5 shadow-[0_24px_80px_-28px_rgba(0,0,0,0.85)] sm:p-6">
-                      {loading ? (
-                        <div
-                          className="flex h-[220px] w-[220px] animate-pulse items-center justify-center rounded-xl bg-slate-200/90 sm:h-[248px] sm:w-[248px]"
-                          aria-hidden
-                        />
-                      ) : (
-                        <QRCodeSVG
-                          value={address}
-                          size={248}
-                          level="M"
-                          includeMargin={false}
-                          bgColor="#ffffff"
-                          fgColor="#0f172a"
-                        />
-                      )}
-                    </div>
+                  <div className="mb-6 flex flex-wrap justify-center gap-2">
+                    <span className="rounded-full border border-white/10 bg-white/4 px-3 py-1 font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-frost/90">
+                      {SAMPLE_DEPOSIT_ADDRESS.network}
+                    </span>
+                    <span className="rounded-full border border-aurum/25 bg-aurum/6 px-3 py-1 text-[10px] font-medium uppercase tracking-[0.18em] text-aurum/95">
+                      {SAMPLE_DEPOSIT_ADDRESS.label}
+                    </span>
                   </div>
 
-                  <p className="mt-6 font-mono text-[10px] font-semibold uppercase tracking-[0.28em] text-mist/75">
-                    Scan to deposit
-                  </p>
+                  <div className="relative rounded-[1.35rem] border border-white/20 bg-white p-5 shadow-[0_24px_80px_-28px_rgba(0,0,0,0.85)] sm:p-6">
+                    <QRCodeSVG value={address} size={248} level="M" includeMargin={false} bgColor="#ffffff" fgColor="#0f172a" />
+                  </div>
+
+                  <p className="mt-6 font-mono text-[10px] font-semibold uppercase tracking-[0.28em] text-mist/75">Scan to deposit</p>
 
                   <div className="mt-8 w-full max-w-md">
-                    <label htmlFor="deposit-address-readonly" className="sr-only">
-                      Wallet address
-                    </label>
+                    <label htmlFor="deposit-address-readonly" className="sr-only">Wallet address</label>
                     <div className="flex items-start justify-center gap-3 rounded-2xl border border-white/10 bg-ink/50 p-4 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)] sm:p-5">
-                      <output
-                        id="deposit-address-readonly"
-                        className="min-w-0 flex-1 break-all text-center font-mono text-[13px] leading-relaxed text-pearl sm:text-[14px]"
-                      >
-                        {loading ? (
-                          <span className="inline-block h-4 w-[90%] max-w-xs animate-pulse rounded bg-white/10" />
-                        ) : (
-                          address
-                        )}
+                      <output id="deposit-address-readonly" className="min-w-0 flex-1 break-all text-center font-mono text-[13px] leading-relaxed text-pearl sm:text-[14px]">
+                        {address}
                       </output>
                       <button
                         type="button"
-                        disabled={loading || !address}
-                        onClick={() => void handleCopy()}
-                        className="mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-aurum/40 bg-[linear-gradient(180deg,rgba(201,171,122,0.18)_0%,rgba(201,171,122,0.06)_100%)] text-aurum shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] transition hover:border-aurum/60 hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-aurum/55 disabled:cursor-not-allowed disabled:opacity-40"
+                        onClick={handleCopy}
+                        className="mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-aurum/40 bg-[linear-gradient(180deg,rgba(201,171,122,0.18)_0%,rgba(201,171,122,0.06)_100%)] text-aurum shadow-[inset_0_1px_0_rgba(255,255,255,0.12)] transition hover:border-aurum/60 hover:brightness-110 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-aurum/55"
                         aria-label={copied ? 'Copied' : 'Copy wallet address'}
                       >
                         {copied ? <IconCheck /> : <IconCopy />}
                       </button>
                     </div>
                     {copied ? (
-                      <p className="mt-3 text-center text-[12px] font-medium tracking-wide text-emerald-300/95">
-                        Copied to clipboard
-                      </p>
+                      <p className="mt-3 text-center text-[12px] font-medium tracking-wide text-emerald-300/95">Copied to clipboard</p>
                     ) : null}
                   </div>
                 </div>

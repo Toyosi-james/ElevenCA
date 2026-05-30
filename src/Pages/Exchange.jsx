@@ -1,21 +1,43 @@
 /**
- * Exchange screen — quotes and swaps use src/lib/payloads/exchange.js
+ * EXCHANGE PAGE (/exchange)
+ *
+ * Swap form: pick from/to assets, enter amount, preview quote, confirm.
+ * Search "BACKEND INTEGRATION" for quote + execute endpoints.
  */
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import HomeFooter from '../components/home/HomeFooter.jsx'
 import HomeHeader from '../components/home/HomeHeader.jsx'
-import { EXCHANGE_HEADER_NAV_LINKS } from '../lib/appNav.js'
-import {
-  computeExchangeQuote,
-  executeExchange,
-  loadExchangeQuote,
-  usdUnitPrice,
-} from '../lib/payloads/exchange.js'
-import { loadSessionUser } from '../lib/payloads/user.js'
-import { WALLET_SUMMARY, loadWalletSummary } from '../lib/payloads/wallet.js'
-import { clearSession, getUserSnapshot, persistWalletSummaryOverride } from '../lib/session.js'
+
+const SESSION_KEY = 'eleven_user'
+
+/** DEMO ONLY — wallet balance for % presets. BACKEND: GET /api/wallet/summary */
+const SAMPLE_WALLET = { totalUsd: 2_847_392.55, change24hPct: 1.24, currency: 'USD' }
+
+/** DEMO ONLY — local price table. BACKEND: quote comes from POST /api/wallet/exchange/quote */
+const USD_PRICES = { BTC: 97200, ETH: 3520, SOL: 178, XRP: 2.42, USDT: 1 }
+const SPREAD = 0.0018
+
+function readLoggedInUser() {
+  try {
+    const raw = sessionStorage.getItem(SESSION_KEY)
+    if (raw) return JSON.parse(raw)
+  } catch {
+    /* ignore */
+  }
+  return { displayName: 'Client' }
+}
+
+/** DEMO ONLY — replace with POST /api/wallet/exchange/quote response */
+function computeQuote(from, to, amountFrom) {
+  if (!Number.isFinite(amountFrom) || amountFrom <= 0) return null
+  const pf = USD_PRICES[from] ?? 1
+  const pt = USD_PRICES[to] ?? 1
+  const usd = amountFrom * pf
+  const amountTo = (usd / pt) * (1 - SPREAD)
+  return { rate: amountFrom > 0 ? amountTo / amountFrom : 0, amountFrom, amountTo, from, to }
+}
 
 /** @typedef {{ id: string; label: string; symbol: string; accent: string; glow: string }} ExchangeAsset */
 
@@ -141,8 +163,8 @@ function DepositStyleCard({ children, innerClassName = '', className = '', allow
 
 export default function Exchange() {
   const navigate = useNavigate()
-  const [user, setUser] = useState(() => getUserSnapshot() || { displayName: 'Client' })
-  const [wallet, setWallet] = useState(() => ({ ...WALLET_SUMMARY }))
+  const [user] = useState(readLoggedInUser)
+  const [wallet] = useState(SAMPLE_WALLET)
 
   const [fromId, setFromId] = useState('BTC')
   const [toId, setToId] = useState('ETH')
@@ -150,33 +172,10 @@ export default function Exchange() {
   const [openTo, setOpenTo] = useState(false)
 
   const [amountStr, setAmountStr] = useState('1')
-  const [preset, setPreset] = useState(/** @type {null | 25 | 50 | 75 | 100} */ (null))
-
-  const [quote, setQuote] = useState(/** @type {ReturnType<typeof computeExchangeQuote> | null} */ (null))
-  const [quoteLoading, setQuoteLoading] = useState(false)
+  const [preset, setPreset] = useState(null)
 
   const [submitting, setSubmitting] = useState(false)
-  const [formError, setFormError] = useState(/** @type {string | null} */ (null))
-
-  useEffect(() => {
-    const ac = new AbortController()
-    ;(async () => {
-      try {
-        const u = await loadSessionUser(ac.signal)
-        if (!ac.signal.aborted) setUser(u)
-      } catch {
-        const snap = getUserSnapshot()
-        if (snap && !ac.signal.aborted) setUser(snap)
-      }
-      try {
-        const w = await loadWalletSummary(ac.signal)
-        if (!ac.signal.aborted) setWallet(w)
-      } catch {
-        if (!ac.signal.aborted) setWallet({ ...WALLET_SUMMARY })
-      }
-    })()
-    return () => ac.abort()
-  }, [])
+  const [formError, setFormError] = useState(null)
 
   const amountFromNum = useMemo(() => {
     const n = Number(String(amountStr).replace(/,/g, ''))
@@ -185,46 +184,25 @@ export default function Exchange() {
 
   const pairInvalid = fromId === toId
 
-  /** Debounced quote */
-  useEffect(() => {
-    if (pairInvalid || amountFromNum <= 0) {
-      setQuote(null)
-      return
-    }
-    const ac = new AbortController()
-    const t = window.setTimeout(async () => {
-      setQuoteLoading(true)
-      setFormError(null)
-      try {
-        const { quote: q } = await loadExchangeQuote(ac.signal, {
-          from: fromId,
-          to: toId,
-          amountFrom: amountFromNum,
-        })
-        if (!ac.signal.aborted) {
-          setQuote(q)
-        }
-      } catch {
-        if (!ac.signal.aborted) {
-          setQuote(computeExchangeQuote(fromId, toId, amountFromNum))
-        }
-      } finally {
-        if (!ac.signal.aborted) setQuoteLoading(false)
-      }
-    }, 420)
-    return () => {
-      ac.abort()
-      window.clearTimeout(t)
-    }
+  /*
+   * BACKEND INTEGRATION — live quote preview
+   * Trigger:  whenever fromId, toId, or amountFromNum changes (debounce ~300ms recommended)
+   * Method:   POST
+   * URL:      /api/wallet/exchange/quote
+   * Body:     { from: string, to: string, amountFrom: number }
+   * Response: { rate: number, amountFrom: number, amountTo: number, from: string, to: string }
+   * Wire to:   setQuote(data) — replace computeQuote() useMemo below
+   */
+  const quote = useMemo(() => {
+    if (pairInvalid || amountFromNum <= 0) return null
+    return computeQuote(fromId, toId, amountFromNum)
   }, [fromId, toId, amountFromNum, pairInvalid])
 
   const applyPreset = useCallback(
     (pct) => {
-      const totalUsd = wallet.totalUsd
-      const px = usdUnitPrice(fromId)
-      if (!px || totalUsd <= 0) return
-      const usdPortion = totalUsd * (pct / 100)
-      const amt = usdPortion / px
+      const px = USD_PRICES[fromId] ?? 1
+      if (!px || wallet.totalUsd <= 0) return
+      const amt = (wallet.totalUsd * (pct / 100)) / px
       setPreset(pct)
       setAmountStr(fmtCrypto(amt, 10))
     },
@@ -232,11 +210,11 @@ export default function Exchange() {
   )
 
   const onLogout = () => {
-    clearSession()
+    sessionStorage.removeItem(SESSION_KEY)
     navigate('/login', { replace: true })
   }
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = (e) => {
     e.preventDefault()
     setFormError(null)
     if (pairInvalid) {
@@ -248,41 +226,38 @@ export default function Exchange() {
       return
     }
     if (!quote || quote.amountTo <= 0) {
-      setFormError('Wait for a valid quote or adjust the amount.')
+      setFormError('Enter a valid amount.')
       return
     }
 
-    setSubmitting(true)
-    const ac = new AbortController()
-    try {
-      // Payload: exchange.js — updates wallet total locally
-      const res = await executeExchange(
-        ac.signal,
-        {
-          from: fromId,
-          to: toId,
-          amountFrom: amountFromNum,
-          quoteId: quote.quoteId,
-        },
-        {
-          fallbackTotalUsd: wallet.totalUsd,
-          fallbackChangePct: wallet.change24hPct,
-          fallbackCurrency: wallet.currency,
-        },
-      )
-      if (res.wallet && typeof res.wallet.totalUsd === 'number') {
-        persistWalletSummaryOverride({
-          totalUsd: res.wallet.totalUsd,
-          change24hPct: res.wallet.change24hPct ?? wallet.change24hPct,
-          currency: res.wallet.currency ?? wallet.currency,
-        })
-      }
-      navigate('/home')
-    } catch (err) {
-      setFormError(err instanceof Error ? err.message : 'Exchange could not be completed.')
-    } finally {
-      setSubmitting(false)
+    // --- Payload sent to backend on confirm (see BACKEND INTEGRATION below) ---
+    const exchangePayload = {
+      from: fromId,
+      to: toId,
+      amountFrom: amountFromNum,
+      amountTo: quote.amountTo,
     }
+
+    /*
+     * ┌─────────────────────────────────────────────────────────────────
+     * │ BACKEND INTEGRATION — Execute swap
+     * ├─────────────────────────────────────────────────────────────────
+     * │ Trigger:  form submit (handleSubmit)
+     * │ Method:   POST
+     * │ URL:      /api/wallet/exchange
+     * │ Auth:     Authorization: Bearer <accessToken>
+     * │ Body:     exchangePayload  →  { from, to, amountFrom, amountTo }
+     * │
+     * │ Success response (example):
+     * │   { transactionId: string, status: 'completed' | 'pending' }
+     * │
+     * │ On success: navigate('/home') or show confirmation
+     * │ On error:   setFormError(message from response)
+     * │
+     * │ DEMO ONLY below — navigates home without calling the server
+     * └─────────────────────────────────────────────────────────────────
+     */
+    navigate('/home')
   }
 
   return (
@@ -298,7 +273,7 @@ export default function Exchange() {
           displayName={user.displayName}
           avatarUrl={user.avatarUrl}
           onLogout={onLogout}
-          navLinks={EXCHANGE_HEADER_NAV_LINKS}
+          navLinks={[{ to: '/home', label: 'Overview' }]}
           showActions={false}
         />
 
@@ -370,7 +345,7 @@ export default function Exchange() {
 
               <button
                 type="submit"
-                disabled={submitting || pairInvalid || amountFromNum <= 0 || quoteLoading || !quote}
+                disabled={submitting || pairInvalid || amountFromNum <= 0 || !quote}
                 className="flex w-full items-center justify-center gap-2 rounded-2xl border border-aurum/35 bg-[linear-gradient(180deg,rgba(201,171,122,0.92)_0%,rgba(140,115,78,0.94)_100%)] px-6 py-4 text-[12px] font-semibold uppercase tracking-[0.22em] text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.28),0_16px_48px_-18px_rgba(201,171,122,0.42)] transition hover:brightness-[1.06] disabled:pointer-events-none disabled:opacity-45 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-aurum/55"
               >
                 {submitting ? (
@@ -443,11 +418,6 @@ export default function Exchange() {
                   <p className="mt-3 text-center text-sm text-amber-200/85 xl:text-left">
                     Select two different assets to fetch a conversion rate.
                   </p>
-                ) : quoteLoading ? (
-                  <div className="mt-4 space-y-3">
-                    <div className="mx-auto h-8 w-48 max-w-full animate-pulse rounded-lg bg-white/[0.06]" />
-                    <div className="mx-auto h-4 w-full max-w-xs animate-pulse rounded bg-white/[0.05]" />
-                  </div>
                 ) : quote ? (
                   <div className="mt-4 text-center xl:text-left">
                     <p className="font-[Arial,Helvetica,sans-serif] text-2xl font-medium tracking-tight text-pearl sm:text-[1.75rem]">
