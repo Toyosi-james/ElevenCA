@@ -2,14 +2,17 @@
  * LOGIN PAGE (/login)
  *
  * Form fields: username, asset PIN, password.
- * Auth flow: prefetch CSRF → POST /api/auth/login with CSRF header → store JWT.
+ * Backend handles authentication — this page only sends the payload and stores
+ * returned tokens via saveTokens() in src/api/auth.js.
  */
 
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { fetchCsrfToken, isAuthenticated, login } from '../api/auth.js'
+import { getAccessToken } from '../api/auth.js'
 
 const BRAND = 'ElevenCA'
+/** Demo session key for user display name until GET /api/auth/me is wired */
+const SESSION_KEY = 'eleven_user'
 
 const Mark = ({ className }) => (
   <svg
@@ -105,27 +108,12 @@ const Login = () => {
   /** @type {[Record<string, string>, React.Dispatch<React.SetStateAction<Record<string, string>>>]} */
   const [fieldErrors, setFieldErrors] = useState({})
 
-  // Redirect when a JWT is already stored
+  // Skip login screen when an access token is already stored
   useEffect(() => {
-    if (isAuthenticated()) {
+    if (getAccessToken()) {
       navigate('/home', { replace: true })
     }
   }, [navigate])
-
-  // Bootstrap CSRF cookie before the user submits credentials
-  useEffect(() => {
-    let cancelled = false
-
-    fetchCsrfToken().catch((err) => {
-      if (!cancelled) {
-        setFormError(err instanceof Error ? err.message : 'Unable to start secure session.')
-      }
-    })
-
-    return () => {
-      cancelled = true
-    }
-  }, [])
 
   useEffect(() => {
     const previous = document.title
@@ -157,14 +145,61 @@ const Login = () => {
       return
     }
 
+    const loginPayload = {
+      username: trimmedUser,
+      assetPin: trimmedPin,
+      password,
+    }
+
     setLoading(true)
 
     try {
-      await login({
-        username: trimmedUser,
-        assetPin: trimmedPin,
-        password,
-      })
+      /*
+       * ┌─────────────────────────────────────────────────────────────────
+       * │ BACKEND INTEGRATION — Login
+       * ├─────────────────────────────────────────────────────────────────
+       * │ 1. Send loginPayload to your backend login endpoint
+       * │ 2. Backend validates credentials and returns tokens
+       * │ 3. Store tokens with saveTokens() (see block below)
+       * │ 4. Navigate to /home on success
+       * └─────────────────────────────────────────────────────────────────
+       *
+       * const response = await fetch('/api/auth/login', {
+       *   method: 'POST',
+       *   headers: { 'Content-Type': 'application/json' },
+       *   body: JSON.stringify(loginPayload),
+       * })
+       *
+       * if (!response.ok) {
+       *   throw new Error('Invalid credentials')
+       * }
+       *
+       * const data = await response.json()
+       */
+
+      /*
+       * ┌─────────────────────────────────────────────────────────────────
+       * │ Backend Response Storage
+       * ├─────────────────────────────────────────────────────────────────
+       * │ The backend returns JWT and CSRF tokens.
+       * │ Save them here after a successful login.
+       * └─────────────────────────────────────────────────────────────────
+       *
+       * import { saveTokens } from '../api/auth.js'
+       *
+       * saveTokens({
+       *   accessToken: data.accessToken,
+       *   csrfToken: data.csrfToken,
+       * })
+       *
+       * navigate('/home', { replace: true })
+       */
+
+      // DEMO ONLY — remove when backend login above is wired
+      const displayName = trimmedUser
+        .replace(/[._-]+/g, ' ')
+        .replace(/\b\w/g, (c) => c.toUpperCase())
+      sessionStorage.setItem(SESSION_KEY, JSON.stringify({ displayName: displayName || 'Client' }))
       navigate('/home', { replace: true })
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Login failed. Please try again.')
