@@ -1,7 +1,8 @@
 /**
  * UPDATE PIN PAGE (/settings/update-pin)
  *
- * Form: new PIN + confirm. Search "BACKEND INTEGRATION" in handleSubmit.
+ * Form: new PIN + confirm.
+ * Backend developer: search "BACKEND INTEGRATION" in handleSubmit.
  */
 
 import React, { useState } from 'react'
@@ -9,22 +10,14 @@ import { useNavigate } from 'react-router-dom'
 import HomeFooter from '../components/home/HomeFooter.jsx'
 import HomeHeader from '../components/home/HomeHeader.jsx'
 
-const SESSION_KEY = 'eleven_user'
 const SETTINGS_NAV_LINKS = [{ to: '/settings', label: 'Settings' }]
 
-function readLoggedInUser() {
-  try {
-    const raw = sessionStorage.getItem(SESSION_KEY)
-    if (raw) return JSON.parse(raw)
-  } catch {
-    /* ignore */
-  }
-  return { displayName: 'Client' }
-}
+/** Static UI placeholder — replace via backend user fetch if needed for header */
+const PLACEHOLDER_USER = { displayName: 'Client' }
 
 export default function UpdatePin() {
   const navigate = useNavigate()
-  const [user] = useState(readLoggedInUser)
+  const [user] = useState(PLACEHOLDER_USER)
 
   // --- Form state ---
   const [newPin, setNewPin] = useState('')
@@ -33,7 +26,12 @@ export default function UpdatePin() {
   const [success, setSuccess] = useState('')
 
   const onLogout = () => {
-    sessionStorage.removeItem(SESSION_KEY)
+    /*
+     * BACKEND INTEGRATION — Logout
+     * Optional: call backend logout endpoint here if required.
+     * Then clear stored tokens: import { clearTokens } from '../api/auth.js'
+     * clearTokens()
+     */
     navigate('/login', { replace: true })
   }
 
@@ -64,25 +62,21 @@ export default function UpdatePin() {
 
     /*
      * ┌─────────────────────────────────────────────────────────────────
-     * │ BACKEND INTEGRATION — Update transaction PIN
+     * │ BACKEND INTEGRATION — Update PIN Mutation
      * ├─────────────────────────────────────────────────────────────────
-     * │ Trigger:  form submit (handleSubmit)
-     * │ Method:   PUT
-     * │ URL:      /api/user/pin
-     * │ Auth:     Authorization: Bearer <accessToken>
-     * │ Body:     { pin: updatePinPayload.newPin }
-     * │           (confirmPin is frontend-only validation — do not send)
+     * │ Trigger:  form submit (handleSubmit), after validation passes
+     * │ Input:    updatePinPayload  →  { newPin, confirmPin }
+     * │           (confirmPin is frontend-only — do not send unless backend requires it)
      * │
-     * │ Success:  204 No Content or { message: 'PIN updated' }
-     * │ On success: setSuccess('PIN updated successfully'); clear form fields
-     * │ On error:   setError(message from response)
+     * │ Connect your backend PIN-update call here.
+     * │ Read stored tokens from src/api/auth.js (getAccessToken, getCsrfToken)
+     * │ if your backend requires them on the request.
      * │
-     * │ DEMO ONLY below — shows success without calling the server
+     * │ On success: setSuccess('PIN updated successfully')
+     * │             clear form fields (setNewPin(''), setConfirmPin(''))
+     * │ On error:   setError(message from backend)
      * └─────────────────────────────────────────────────────────────────
      */
-    setSuccess('PIN updated successfully')
-    setNewPin('')
-    setConfirmPin('')
   }
 
   return (

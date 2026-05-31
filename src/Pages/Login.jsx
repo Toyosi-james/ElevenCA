@@ -2,8 +2,7 @@
  * LOGIN PAGE (/login)
  *
  * Form fields: username, asset PIN, password.
- * Backend handles authentication — this page only sends the payload and stores
- * returned tokens via saveTokens() in src/api/auth.js.
+ * Backend developer: connect login in handleSubmit (search "BACKEND INTEGRATION").
  */
 
 import React, { useEffect, useState } from 'react'
@@ -11,8 +10,6 @@ import { useNavigate } from 'react-router-dom'
 import { getAccessToken } from '../api/auth.js'
 
 const BRAND = 'ElevenCA'
-/** Demo session key for user display name until GET /api/auth/me is wired */
-const SESSION_KEY = 'eleven_user'
 
 const Mark = ({ className }) => (
   <svg
@@ -156,51 +153,44 @@ const Login = () => {
     try {
       /*
        * ┌─────────────────────────────────────────────────────────────────
-       * │ BACKEND INTEGRATION — Login
+       * │ BACKEND INTEGRATION — Step 1: Login Request
        * ├─────────────────────────────────────────────────────────────────
-       * │ 1. Send loginPayload to your backend login endpoint
-       * │ 2. Backend validates credentials and returns tokens
-       * │ 3. Store tokens with saveTokens() (see block below)
-       * │ 4. Navigate to /home on success
+       * │ Trigger:  form submit (handleSubmit), after validation passes
+       * │ Input:    loginPayload  →  { username, assetPin, password }
+       * │
+       * │ Connect your backend login call here.
+       * │ Use whatever method, URL, and headers your backend requires.
+       * │ Assign the backend response to a variable (e.g. response).
        * └─────────────────────────────────────────────────────────────────
-       *
-       * const response = await fetch('/api/auth/login', {
-       *   method: 'POST',
-       *   headers: { 'Content-Type': 'application/json' },
-       *   body: JSON.stringify(loginPayload),
-       * })
-       *
-       * if (!response.ok) {
-       *   throw new Error('Invalid credentials')
-       * }
-       *
-       * const data = await response.json()
        */
 
       /*
        * ┌─────────────────────────────────────────────────────────────────
-       * │ Backend Response Storage
+       * │ BACKEND INTEGRATION — Step 2: Backend Response Storage
        * ├─────────────────────────────────────────────────────────────────
-       * │ The backend returns JWT and CSRF tokens.
-       * │ Save them here after a successful login.
+       * │ After a successful login, the backend returns tokens.
+       * │ Save them here using saveTokens() from src/api/auth.js.
+       * │
+       * │ import { saveTokens } from '../api/auth.js'
+       * │
+       * │ saveTokens({
+       * │   accessToken: response.<your-jwt-field>,
+       * │   csrfToken:   response.<your-csrf-field>,
+       * │ })
+       * │
+       * │ Map field names to match your backend response shape.
        * └─────────────────────────────────────────────────────────────────
-       *
-       * import { saveTokens } from '../api/auth.js'
-       *
-       * saveTokens({
-       *   accessToken: data.accessToken,
-       *   csrfToken: data.csrfToken,
-       * })
-       *
-       * navigate('/home', { replace: true })
        */
 
-      // DEMO ONLY — remove when backend login above is wired
-      const displayName = trimmedUser
-        .replace(/[._-]+/g, ' ')
-        .replace(/\b\w/g, (c) => c.toUpperCase())
-      sessionStorage.setItem(SESSION_KEY, JSON.stringify({ displayName: displayName || 'Client' }))
-      navigate('/home', { replace: true })
+      /*
+       * ┌─────────────────────────────────────────────────────────────────
+       * │ BACKEND INTEGRATION — Step 3: Post-Login Navigation
+       * ├─────────────────────────────────────────────────────────────────
+       * │ After tokens are saved, redirect the user into the app.
+       * │
+       * │ navigate('/home', { replace: true })
+       * └─────────────────────────────────────────────────────────────────
+       */
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Login failed. Please try again.')
     } finally {

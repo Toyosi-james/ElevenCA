@@ -1,8 +1,8 @@
 /**
  * SETTINGS PAGE (/settings)
  *
- * Navigation hub only — no API calls on this page.
- * Routes to UpdatePassword (PUT /api/user/password) and UpdatePin (PUT /api/user/pin).
+ * Navigation hub — links to Update Password and Update PIN pages.
+ * Backend developer: no API calls needed on this page.
  */
 
 import React, { useState } from 'react'
@@ -10,24 +10,20 @@ import { useNavigate } from 'react-router-dom'
 import HomeFooter from '../components/home/HomeFooter.jsx'
 import HomeHeader from '../components/home/HomeHeader.jsx'
 
-const SESSION_KEY = 'eleven_user'
-
-function readLoggedInUser() {
-  try {
-    const raw = sessionStorage.getItem(SESSION_KEY)
-    if (raw) return JSON.parse(raw)
-  } catch {
-    /* ignore */
-  }
-  return { displayName: 'Client' }
-}
+/** Static UI placeholder — replace via backend user fetch in parent/header pages */
+const PLACEHOLDER_USER = { displayName: 'Client' }
 
 export default function Settings() {
   const navigate = useNavigate()
-  const [user] = useState(readLoggedInUser)
+  const [user] = useState(PLACEHOLDER_USER)
 
   const onLogout = () => {
-    sessionStorage.removeItem(SESSION_KEY)
+    /*
+     * BACKEND INTEGRATION — Logout
+     * Optional: call backend logout endpoint here if required.
+     * Then clear stored tokens: import { clearTokens } from '../api/auth.js'
+     * clearTokens()
+     */
     navigate('/login', { replace: true })
   }
 

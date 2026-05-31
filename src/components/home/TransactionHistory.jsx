@@ -1,18 +1,17 @@
 /**
- * Transaction history table — UI ONLY (no fetch here).
+ * Transaction history table — display-only component (no data fetching here).
  *
- * ┌─ WHERE TO WIRE THE API ─────────────────────────────────────────────
- * │  File:  src/Pages/Home.jsx  (NOT this file)
- * │  Search Home.jsx for:  "BACKEND INTEGRATION — Transaction history"
+ * ┌─ BACKEND INTEGRATION ───────────────────────────────────────────────
+ * │  Wire the backend fetch in the PARENT page:
+ * │    File:  src/Pages/Home.jsx
+ * │    Search:  "BACKEND INTEGRATION — Fetch Transaction History"
  * │
- * │  Endpoint: GET /api/wallet/transactions?page=&limit=
- * │  Parent passes the response as props below.
+ * │  Pass fetched data into this component via props (see below).
+ * │  Re-fetch in Home.jsx when onPageChange fires (pagination).
  * └──────────────────────────────────────────────────────────────────────
  *
- * Expected props from API response:
- *   items: [{ id, title, amount, currency, direction: 'in'|'out', status, occurredAt, reference? }]
- *   page, pageSize, total, totalPages, hasNextPage
- *   onPageChange(nextPage) — Home.jsx re-fetches when user clicks Next/Prev
+ * Props supplied by parent after backend integration:
+ *   items, loading, page, pageSize, total, totalPages, hasNextPage, onPageChange
  */
 
 import React from 'react'

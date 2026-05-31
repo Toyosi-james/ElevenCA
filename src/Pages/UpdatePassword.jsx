@@ -1,7 +1,8 @@
 /**
  * UPDATE PASSWORD PAGE (/settings/update-password)
  *
- * Form: new password + confirm. Search "BACKEND INTEGRATION" in handleSubmit.
+ * Form: new password + confirm.
+ * Backend developer: search "BACKEND INTEGRATION" in handleSubmit.
  */
 
 import React, { useState } from 'react'
@@ -9,22 +10,14 @@ import { useNavigate } from 'react-router-dom'
 import HomeFooter from '../components/home/HomeFooter.jsx'
 import HomeHeader from '../components/home/HomeHeader.jsx'
 
-const SESSION_KEY = 'eleven_user'
 const SETTINGS_NAV_LINKS = [{ to: '/settings', label: 'Settings' }]
 
-function readLoggedInUser() {
-  try {
-    const raw = sessionStorage.getItem(SESSION_KEY)
-    if (raw) return JSON.parse(raw)
-  } catch {
-    /* ignore */
-  }
-  return { displayName: 'Client' }
-}
+/** Static UI placeholder — replace via backend user fetch if needed for header */
+const PLACEHOLDER_USER = { displayName: 'Client' }
 
 export default function UpdatePassword() {
   const navigate = useNavigate()
-  const [user] = useState(readLoggedInUser)
+  const [user] = useState(PLACEHOLDER_USER)
 
   // --- Form state ---
   const [newPassword, setNewPassword] = useState('')
@@ -33,7 +26,12 @@ export default function UpdatePassword() {
   const [success, setSuccess] = useState('')
 
   const onLogout = () => {
-    sessionStorage.removeItem(SESSION_KEY)
+    /*
+     * BACKEND INTEGRATION — Logout
+     * Optional: call backend logout endpoint here if required.
+     * Then clear stored tokens: import { clearTokens } from '../api/auth.js'
+     * clearTokens()
+     */
     navigate('/login', { replace: true })
   }
 
@@ -64,25 +62,21 @@ export default function UpdatePassword() {
 
     /*
      * ┌─────────────────────────────────────────────────────────────────
-     * │ BACKEND INTEGRATION — Update account password
+     * │ BACKEND INTEGRATION — Update Password Mutation
      * ├─────────────────────────────────────────────────────────────────
-     * │ Trigger:  form submit (handleSubmit)
-     * │ Method:   PUT
-     * │ URL:      /api/user/password
-     * │ Auth:     Authorization: Bearer <accessToken>
-     * │ Body:     { password: updatePasswordPayload.newPassword }
-     * │           (confirmPassword is frontend-only validation — do not send)
+     * │ Trigger:  form submit (handleSubmit), after validation passes
+     * │ Input:    updatePasswordPayload  →  { newPassword, confirmPassword }
+     * │           (confirmPassword is frontend-only — do not send unless backend requires it)
      * │
-     * │ Success:  204 No Content or { message: 'Password updated' }
-     * │ On success: setSuccess('Password updated successfully'); clear form fields
-     * │ On error:   setError(message from response)
+     * │ Connect your backend password-update call here.
+     * │ Read stored tokens from src/api/auth.js (getAccessToken, getCsrfToken)
+     * │ if your backend requires them on the request.
      * │
-     * │ DEMO ONLY below — shows success without calling the server
+     * │ On success: setSuccess('Password updated successfully')
+     * │             clear form fields (setNewPassword(''), setConfirmPassword(''))
+     * │ On error:   setError(message from backend)
      * └─────────────────────────────────────────────────────────────────
      */
-    setSuccess('Password updated successfully')
-    setNewPassword('')
-    setConfirmPassword('')
   }
 
   return (

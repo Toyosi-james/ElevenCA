@@ -1,21 +1,16 @@
 /**
  * PROFILE PAGE (/profile)
  *
- * Read-only account details. Search "BACKEND INTEGRATION" for GET /api/profile.
+ * Read-only account details.
+ * Backend developer: search "BACKEND INTEGRATION" to wire profile data fetch.
  */
 
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import HomeFooter from '../components/home/HomeFooter.jsx'
 
-const SESSION_KEY = 'eleven_user'
-
-/**
- * DEMO ONLY — profile fields shown on this page.
- * BACKEND: GET /api/profile (or GET /api/auth/me if profile is embedded in user)
- * Response: { firstName, lastName, email, gender, age, country, residentialAddress }
- */
-const SAMPLE_PROFILE = {
+/** Static UI placeholder — replace with backend data via setProfile() */
+const PLACEHOLDER_PROFILE = {
   firstName: 'Alexandra',
   lastName: 'Chen',
   email: 'alexandra.chen@vault.example',
@@ -23,16 +18,6 @@ const SAMPLE_PROFILE = {
   age: '34',
   country: 'United States',
   residentialAddress: '120 Park Avenue, Suite 1800, New York, NY 10017',
-}
-
-function readLoggedInUser() {
-  try {
-    const raw = sessionStorage.getItem(SESSION_KEY)
-    if (raw) return JSON.parse(raw)
-  } catch {
-    /* ignore */
-  }
-  return { displayName: 'Client' }
 }
 
 const IconChevronLeft = () => (
@@ -58,26 +43,22 @@ function ProfileRow({ label, value, multiline, className = '' }) {
 
 export default function Profile() {
   const navigate = useNavigate()
-  const snapshot = readLoggedInUser()
-  const [profile] = useState(SAMPLE_PROFILE)
+  const [profile, setProfile] = useState(PLACEHOLDER_PROFILE)
 
   /*
    * ┌─────────────────────────────────────────────────────────────────
-   * │ BACKEND INTEGRATION — Load user profile
+   * │ BACKEND INTEGRATION — Fetch Profile Data
    * ├─────────────────────────────────────────────────────────────────
    * │ Trigger:  page mount (useEffect)
-   * │ Method:   GET
-   * │ URL:      /api/profile
-   * │ Auth:     Authorization: Bearer <accessToken>
    * │
-   * │ Response: {
-   * │   firstName: string, lastName: string, email: string,
-   * │   gender: string, age: string, country: string,
-   * │   residentialAddress: string
-   * │ }
+   * │ Connect your backend profile fetch here.
+   * │ Read stored tokens from src/api/auth.js (getAccessToken, getCsrfToken)
+   * │ if your backend requires them on the request.
    * │
-   * │ Wire to: setProfile(data)
-   * │ DEMO ONLY: SAMPLE_PROFILE constant used as initial state
+   * │ On success: map the backend response to profile state
+   * │   → setProfile(mappedData)
+   * │
+   * │ On error:   handle and display an error message to the user
    * └─────────────────────────────────────────────────────────────────
    */
 
@@ -125,9 +106,6 @@ export default function Profile() {
               <h1 className="mt-2.5 max-w-2xl font-serif text-[1.8125rem] font-medium tracking-[0.02em] text-pearl sm:text-[2.125rem] md:text-[2.25rem]">
                 {fullName}
               </h1>
-              <p className="mx-auto mt-3 max-w-md font-serif text-[0.9375rem] font-normal italic leading-snug text-mist/85">
-                Signed in as {snapshot.displayName}
-              </p>
             </header>
 
             <div className="min-w-0 w-full">
