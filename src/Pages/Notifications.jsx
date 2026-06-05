@@ -87,13 +87,12 @@ function NotificationCard({ n }) {
         <p className="mt-1 text-[13px] font-medium text-pearl/92">{n.headline}</p>
         <p className="mt-2 text-[13px] leading-relaxed text-mist/85">{n.body}</p>
         <p
-          className={`mt-3 inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 font-[Arial,Helvetica,sans-serif] text-[12px] font-semibold tabular-nums ${
-            flat
+          className={`mt-3 inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 font-[Arial,Helvetica,sans-serif] text-[12px] font-semibold tabular-nums ${flat
               ? 'border-white/15 bg-white/[0.04] text-mist'
               : up
                 ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-100/95'
                 : 'border-red-400/30 bg-red-500/10 text-red-100/95'
-          }`}
+            }`}
         >
           {up && !flat ? '▲' : !up && !flat ? '▼' : '—'}{' '}
           {up && !flat ? '+' : ''}
@@ -106,6 +105,12 @@ function NotificationCard({ n }) {
 
 export default function Notifications() {
   const navigate = useNavigate()
+  useEffect(() => {
+    if (!getAccessToken()) {
+      navigate('/login', { replace: true })
+    }
+  }, [navigate])
+
   const [user] = useState(readLoggedInUser)
   const [items] = useState(SAMPLE_NOTIFICATIONS)
 

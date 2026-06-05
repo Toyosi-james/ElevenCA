@@ -35,7 +35,7 @@ const DEFAULT_WALLET = '0x71C7656EC7ab88b098defB751B7401B5f6d8976F'
  */
 const SAMPLE_DEPOSIT_ADDRESS = {
   address: envAddress && String(envAddress).trim() !== '' ? String(envAddress).trim() : DEFAULT_WALLET,
-  network: 'Ethereum',
+  network: 'Bitcoin',
   label: 'Vault receiving address',
 }
 
@@ -61,7 +61,7 @@ const IconCheck = () => (
   </svg>
 )
 
-function copyToClipboard(text) {
+async function copyToClipboard(text) {
   if (navigator.clipboard?.writeText) {
     return navigator.clipboard.writeText(text).then(() => true).catch(() => false)
   }

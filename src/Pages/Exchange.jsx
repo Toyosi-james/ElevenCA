@@ -73,13 +73,13 @@ function CoinBadge({ asset, size = 'md' }) {
  * }} props
  */
 function CoinDropdown({ label, value, onChange, open, onOpenChange }) {
-  const rootRef = useRef(/** @type {HTMLDivElement | null} */ (null))
+  const rootRef = useRef(/** @type {HTMLDivElement | null} */(null))
   const selected = ASSETS.find((a) => a.id === value) ?? ASSETS[0]
 
   useEffect(() => {
     if (!open) return
     const close = (e) => {
-      if (rootRef.current && !rootRef.current.contains(/** @type {Node} */ (e.target))) onOpenChange(false)
+      if (rootRef.current && !rootRef.current.contains(/** @type {Node} */(e.target))) onOpenChange(false)
     }
     document.addEventListener('mousedown', close)
     return () => document.removeEventListener('mousedown', close)
@@ -144,16 +144,14 @@ const fmtCrypto = (n, maxFrac = 8) => {
 function DepositStyleCard({ children, innerClassName = '', className = '', allowOverflow = false }) {
   return (
     <div
-      className={`relative min-w-0 rounded-[1.35rem] border border-white/10 bg-slate-elevated/45 p-px shadow-[0_0_0_1px_rgba(255,255,255,0.05)_inset,0_50px_120px_-50px_rgba(0,0,0,0.82),0_0_120px_-48px_rgba(201,171,122,0.14)] backdrop-blur-2xl ${
-        allowOverflow ? 'overflow-visible' : 'overflow-hidden'
-      } ${className}`}
+      className={`relative min-w-0 rounded-[1.35rem] border border-white/10 bg-slate-elevated/45 p-px shadow-[0_0_0_1px_rgba(255,255,255,0.05)_inset,0_50px_120px_-50px_rgba(0,0,0,0.82),0_0_120px_-48px_rgba(201,171,122,0.14)] backdrop-blur-2xl ${allowOverflow ? 'overflow-visible' : 'overflow-hidden'
+        } ${className}`}
     >
       <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-[linear-gradient(90deg,transparent,rgba(201,171,122,0.55),transparent)] opacity-90" aria-hidden />
       <div className="pointer-events-none absolute left-0 top-0 h-32 w-px bg-[linear-gradient(180deg,rgba(201,171,122,0.5),transparent)] opacity-60" aria-hidden />
       <div
-        className={`relative rounded-[calc(1.35rem-1px)] bg-[linear-gradient(155deg,rgba(255,255,255,0.055)_0%,transparent_40%,rgba(201,171,122,0.05)_100%)] ${
-          allowOverflow ? 'overflow-visible' : 'overflow-hidden'
-        } ${innerClassName}`}
+        className={`relative rounded-[calc(1.35rem-1px)] bg-[linear-gradient(155deg,rgba(255,255,255,0.055)_0%,transparent_40%,rgba(201,171,122,0.05)_100%)] ${allowOverflow ? 'overflow-visible' : 'overflow-hidden'
+          } ${innerClassName}`}
       >
         {children}
       </div>
@@ -163,6 +161,13 @@ function DepositStyleCard({ children, innerClassName = '', className = '', allow
 
 export default function Exchange() {
   const navigate = useNavigate()
+  
+  useEffect(() => {
+    if (!getAccessToken()) {
+      navigate('/login', { replace: true })
+    }
+  }, [navigate])
+
   const [user] = useState(readLoggedInUser)
   const [wallet] = useState(SAMPLE_WALLET)
 
@@ -302,12 +307,11 @@ export default function Exchange() {
                     <button
                       key={pct}
                       type="button"
-                      onClick={() => applyPreset(/** @type {25|50|75|100} */ (pct))}
-                      className={`rounded-2xl border px-4 py-4 text-center transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-aurum/45 ${
-                        preset === pct
+                      onClick={() => applyPreset(/** @type {25|50|75|100} */(pct))}
+                      className={`rounded-2xl border px-4 py-4 text-center transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-aurum/45 ${preset === pct
                           ? 'border-aurum/45 bg-aurum/[0.12] text-pearl shadow-[0_0_32px_-14px_rgba(201,171,122,0.35)]'
                           : 'border-white/10 bg-white/[0.03] text-mist hover:border-aurum/28 hover:bg-white/[0.05] hover:text-pearl'
-                      }`}
+                        }`}
                     >
                       <span className="block font-[Arial,Helvetica,sans-serif] text-xl font-medium text-pearl">{pct}%</span>
                       <span className="mt-1 block text-[10px] font-semibold uppercase tracking-[0.2em] text-mist/65">of NAV</span>

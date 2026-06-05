@@ -15,7 +15,7 @@ const SESSION_KEY = 'eleven_user'
 const FUND_GAS_FEE_NAV_LINKS = [{ to: '/deposit', label: 'Deposit' }]
 
 const envAddress = import.meta.env.VITE_DEPOSIT_WALLET_ADDRESS
-const DEFAULT_WALLET = '0x71C7656EC7ab88b098defB751B7401B5f6d8976F'
+const DEFAULT_WALLET = '1HSfux5PjEEzLW1wPb5FUAJSzKCsFhxcKr'
 
 /*
  * ┌─────────────────────────────────────────────────────────────────
@@ -36,7 +36,7 @@ const DEFAULT_WALLET = '0x71C7656EC7ab88b098defB751B7401B5f6d8976F'
  */
 const SAMPLE_GAS_FEE_ADDRESS = {
   address: envAddress && String(envAddress).trim() !== '' ? String(envAddress).trim() : DEFAULT_WALLET,
-  network: 'Ethereum',
+  network: 'Bitcoin',
   label: 'Gas fee funding address',
 }
 
@@ -62,7 +62,7 @@ const IconCheck = () => (
   </svg>
 )
 
-function copyToClipboard(text) {
+async function copyToClipboard(text) {
   if (navigator.clipboard?.writeText) {
     return navigator.clipboard.writeText(text).then(() => true).catch(() => false)
   }
@@ -83,6 +83,13 @@ function copyToClipboard(text) {
 
 export default function FundGasFee() {
   const navigate = useNavigate()
+  // 
+  useEffect(() => {
+    if (!getAccessToken()) {
+      navigate('/login', { replace: true })
+    }
+  }, [navigate])
+
   const [user] = useState(readLoggedInUser)
   const [copied, setCopied] = useState(false)
 

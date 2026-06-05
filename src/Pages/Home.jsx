@@ -12,6 +12,9 @@ import FlowChart from '../components/home/FlowChart.jsx'
 import TransactionHistory from '../components/home/TransactionHistory.jsx'
 import HomeFooter from '../components/home/HomeFooter.jsx'
 import HomeHeader from '../components/home/HomeHeader.jsx'
+import { getAccessToken, getCsrfToken } from '../api/auth.js'
+import axios from 'axios'
+
 
 const TRANSACTION_PAGE_SIZE = 6
 
@@ -40,6 +43,13 @@ const PLACEHOLDER_TRANSACTIONS = [
 
 export default function Home() {
   const navigate = useNavigate()
+  // 
+  useEffect(() => {
+  if (!getAccessToken()) {
+    navigate('/login', { replace: true })
+  }
+}, [navigate])
+
   const [user] = useState(PLACEHOLDER_USER)
   const [balance] = useState(PLACEHOLDER_BALANCE)
   const [chartRange, setChartRange] = useState('30d')

@@ -7,7 +7,8 @@
 
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { getAccessToken } from '../api/auth.js'
+import { getAccessToken, saveTokens } from '../api/auth.js'
+import axios from 'axios'
 
 const BRAND = 'ElevenCA'
 
@@ -151,46 +152,21 @@ const Login = () => {
     setLoading(true)
 
     try {
-      /*
-       * ┌─────────────────────────────────────────────────────────────────
-       * │ BACKEND INTEGRATION — Step 1: Login Request
-       * ├─────────────────────────────────────────────────────────────────
-       * │ Trigger:  form submit (handleSubmit), after validation passes
-       * │ Input:    loginPayload  →  { username, assetPin, password }
-       * │
-       * │ Connect your backend login call here.
-       * │ Use whatever method, URL, and headers your backend requires.
-       * │ Assign the backend response to a variable (e.g. response).
-       * └─────────────────────────────────────────────────────────────────
-       */
-
-      /*
-       * ┌─────────────────────────────────────────────────────────────────
-       * │ BACKEND INTEGRATION — Step 2: Backend Response Storage
-       * ├─────────────────────────────────────────────────────────────────
-       * │ After a successful login, the backend returns tokens.
-       * │ Save them here using saveTokens() from src/api/auth.js.
-       * │
-       * │ import { saveTokens } from '../api/auth.js'
-       * │
-       * │ saveTokens({
-       * │   accessToken: response.<your-jwt-field>,
-       * │   csrfToken:   response.<your-csrf-field>,
-       * │ })
-       * │
-       * │ Map field names to match your backend response shape.
-       * └─────────────────────────────────────────────────────────────────
-       */
-
-      /*
-       * ┌─────────────────────────────────────────────────────────────────
-       * │ BACKEND INTEGRATION — Step 3: Post-Login Navigation
-       * ├─────────────────────────────────────────────────────────────────
-       * │ After tokens are saved, redirect the user into the app.
-       * │
-       * │ navigate('/home', { replace: true })
-       * └─────────────────────────────────────────────────────────────────
-       */
+      // ====
+       const url = 'https://web3.elevenca.org/client_login'
+      const loginUser = await axios.post(url, loginPayload, {headers: {
+        'Content-Type': 'application/json'
+      }})
+      if(!loginUser.data){throw new Error('No Login Response Found')}
+      
+      saveTokens({
+        accessToken: loginUser.data.accessToken,
+        csrfToken: loginUser.data.csrfToken,
+      })
+       
+      // ====
+       
+      navigate('/home', { replace: true })
     } catch (err) {
       setFormError(err instanceof Error ? err.message : 'Login failed. Please try again.')
     } finally {

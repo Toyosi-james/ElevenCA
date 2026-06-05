@@ -25,6 +25,13 @@ function readLoggedInUser() {
 
 export default function Deposit() {
   const navigate = useNavigate()
+  // 
+  useEffect(() => {
+    if (!getAccessToken()) {
+      navigate('/login', { replace: true })
+    }
+  }, [navigate])
+
   const [user] = useState(readLoggedInUser)
 
   const onLogout = () => {

@@ -2,23 +2,13 @@
  * PROFILE PAGE (/profile)
  *
  * Read-only account details.
- * Backend developer: search "BACKEND INTEGRATION" to wire profile data fetch.
  */
 
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import HomeFooter from '../components/home/HomeFooter.jsx'
-
-/** Static UI placeholder — replace with backend data via setProfile() */
-const PLACEHOLDER_PROFILE = {
-  firstName: 'Alexandra',
-  lastName: 'Chen',
-  email: 'alexandra.chen@vault.example',
-  gender: 'Female',
-  age: '34',
-  country: 'United States',
-  residentialAddress: '120 Park Avenue, Suite 1800, New York, NY 10017',
-}
+import { getAccessToken, getCsrfToken, clearTokens } from '../api/auth.js'
+import axios from 'axios'
 
 const IconChevronLeft = () => (
   <svg className="h-5 w-5 text-aurum" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden>
@@ -28,45 +18,85 @@ const IconChevronLeft = () => (
 
 function ProfileRow({ label, value, multiline, className = '' }) {
   return (
-    <div
-      className={`rounded-2xl border border-white/[0.08] bg-[linear-gradient(165deg,rgba(255,255,255,0.06)_0%,rgba(255,255,255,0.02)_48%,rgba(0,0,0,0.06)_100%)] px-5 py-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-sm transition duration-200 hover:border-aurum/28 hover:shadow-[0_0_32px_-18px_rgba(201,171,122,0.35)] sm:px-6 sm:py-6 ${className}`}
-    >
+    <div className={`rounded-2xl border border-white/[0.08] bg-[linear-gradient(165deg,rgba(255,255,255,0.06)_0%,rgba(255,255,255,0.02)_48%,rgba(0,0,0,0.06)_100%)] px-5 py-5 shadow-[inset_0_1px_0_rgba(255,255,255,0.06)] backdrop-blur-sm transition duration-200 hover:border-aurum/28 hover:shadow-[0_0_32px_-18px_rgba(201,171,122,0.35)] sm:px-6 sm:py-6 ${className}`}>
       <p className="text-[10px] font-semibold uppercase tracking-[0.26em] text-mist/80">{label}</p>
-      <p
-        className={`mt-2 text-pearl ${multiline ? 'font-serif text-[1.0625rem] leading-relaxed tracking-[0.015em] text-pearl/95' : 'font-serif text-lg tracking-tight sm:text-xl'}`}
-      >
-        {value}
+      <p className={`mt-2 text-pearl ${multiline ? 'font-serif text-[1.0625rem] leading-relaxed tracking-[0.015em] text-pearl/95' : 'font-serif text-lg tracking-tight sm:text-xl'}`}>
+        {value || <span className="text-mist/40 italic">Not provided</span>}
       </p>
+    </div>
+  )
+}
+
+function ProfileSkeleton() {
+  return (
+    <div className="animate-pulse space-y-4">
+      {[...Array(7)].map((_, i) => (
+        <div key={i} className={`h-24 rounded-2xl bg-white/5 ${[2, 4, 6].includes(i) ? 'sm:col-span-2' : ''}`} />
+      ))}
     </div>
   )
 }
 
 export default function Profile() {
   const navigate = useNavigate()
-  const [profile, setProfile] = useState(PLACEHOLDER_PROFILE)
+  const [profile, setProfile] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
-  /*
-   * ┌─────────────────────────────────────────────────────────────────
-   * │ BACKEND INTEGRATION — Fetch Profile Data
-   * ├─────────────────────────────────────────────────────────────────
-   * │ Trigger:  page mount (useEffect)
-   * │
-   * │ Connect your backend profile fetch here.
-   * │ Read stored tokens from src/api/auth.js (getAccessToken, getCsrfToken)
-   * │ if your backend requires them on the request.
-   * │
-   * │ On success: map the backend response to profile state
-   * │   → setProfile(mappedData)
-   * │
-   * │ On error:   handle and display an error message to the user
-   * └─────────────────────────────────────────────────────────────────
-   */
+  // Fetch profile on mount
+  useEffect(() => {
+    const fetchProfile = async () => {
+      const token = getAccessToken()
+      
+      if (!token) {
+        navigate('/login', { replace: true })
+        return
+      }
 
-  const letter = profile.firstName.charAt(0).toUpperCase()
-  const fullName = `${profile.firstName} ${profile.lastName}`.trim()
+      try {
+        const csrfToken = getCsrfToken()
+        const response = await axios.get(
+          'https://web3.elevenca.org/elevenCA/client_profile',
+          {
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'x-csrf-token': csrfToken
+            },
+            timeout: 10000
+          }
+        )
+
+        if (!response.data) {
+          throw new Error('Empty response from server')
+        }
+
+        setProfile(response.data)
+      } catch (err) {
+        console.error('Profile fetch failed:', err)
+        
+        if (err.response?.status === 401) {
+          clearTokens()
+          navigate('/login', { replace: true })
+          return
+        }
+
+        setError(err.response?.data?.message || err.message || 'Failed to load profile')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchProfile()
+  }, [navigate])
+
+  const letter = profile?.firstName?.charAt(0).toUpperCase() || '?'
+  const fullName = profile 
+    ? `${profile.firstName || ''} ${profile.lastName || ''}`.trim() 
+    : 'Loading...'
 
   return (
     <div className="relative min-h-screen w-full overflow-x-hidden bg-ink text-pearl">
+      {/* Background layers */}
       <div className="pointer-events-none absolute inset-0" aria-hidden>
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_75%_48%_at_50%_-18%,rgba(201,171,122,0.15),transparent)]" />
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_55%_40%_at_50%_105%,rgba(95,115,175,0.06),transparent)]" />
@@ -94,10 +124,7 @@ export default function Profile() {
           <div className="motion-safe:animate-fade-up flex w-full flex-col gap-12 sm:gap-14">
             <header className="mx-auto flex w-full max-w-5xl flex-col items-center text-center">
               <div className="relative">
-                <div
-                  className="relative flex h-[7.75rem] w-[7.75rem] shrink-0 items-center justify-center rounded-full bg-[linear-gradient(155deg,rgba(218,188,140,0.55)_0%,rgba(201,171,122,0.28)_38%,rgba(12,14,20,0.98)_100%)] text-[3rem] font-medium tracking-tight text-pearl shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_20px_56px_-24px_rgba(201,171,122,0.5),inset_0_2px_0_rgba(255,255,255,0.14)] ring-[3px] ring-aurum/30 sm:h-[8.5rem] sm:w-[8.5rem] sm:text-[3.25rem]"
-                  aria-hidden
-                >
+                <div className="relative flex h-[7.75rem] w-[7.75rem] shrink-0 items-center justify-center rounded-full bg-[linear-gradient(155deg,rgba(218,188,140,0.55)_0%,rgba(201,171,122,0.28)_38%,rgba(12,14,20,0.98)_100%)] text-[3rem] font-medium tracking-tight text-pearl shadow-[0_0_0_1px_rgba(255,255,255,0.1),0_20px_56px_-24px_rgba(201,171,122,0.5),inset_0_2px_0_rgba(255,255,255,0.14)] ring-[3px] ring-aurum/30 sm:h-[8.5rem] sm:w-[8.5rem] sm:text-[3.25rem]">
                   <span className="font-serif drop-shadow-[0_2px_12px_rgba(0,0,0,0.45)]">{letter}</span>
                 </div>
               </div>
@@ -110,24 +137,35 @@ export default function Profile() {
 
             <div className="min-w-0 w-full">
               <div className="rounded-[1.25rem] bg-[linear-gradient(128deg,rgba(201,171,122,0.24)_0%,rgba(255,255,255,0.06)_42%,rgba(201,171,122,0.1)_100%)] p-[1px] shadow-[0_0_0_1px_rgba(255,255,255,0.05),0_40px_100px_-52px_rgba(0,0,0,0.92),0_0_140px_-52px_rgba(201,171,122,0.16)]">
-                <section
-                  className="relative overflow-hidden rounded-[1.1875rem] border border-white/[0.07] bg-slate-elevated/[0.42] px-5 py-8 backdrop-blur-2xl sm:px-9 sm:py-10 lg:px-11 lg:py-11"
-                  aria-label="Account details"
-                >
+                <section className="relative overflow-hidden rounded-[1.1875rem] border border-white/[0.07] bg-slate-elevated/[0.42] px-5 py-8 backdrop-blur-2xl sm:px-9 sm:py-10 lg:px-11 lg:py-11" aria-label="Account details">
                   <div className="relative mb-8 border-b border-white/[0.06] pb-8 sm:mb-9 sm:pb-9">
                     <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-aurum/95">Registry</p>
                     <h2 className="mt-2 font-serif text-xl font-medium tracking-tight text-pearl sm:text-2xl">Identity & contact</h2>
                   </div>
 
-                  <div className="relative grid gap-4 sm:grid-cols-2 sm:gap-5">
-                    <ProfileRow label="First name" value={profile.firstName} />
-                    <ProfileRow label="Last name" value={profile.lastName} />
-                    <ProfileRow label="Email address" value={profile.email} className="sm:col-span-2" />
-                    <ProfileRow label="Gender" value={profile.gender} />
-                    <ProfileRow label="Age" value={profile.age} />
-                    <ProfileRow label="Country" value={profile.country} className="sm:col-span-2" />
-                    <ProfileRow label="Residential address" value={profile.residentialAddress} multiline className="sm:col-span-2" />
-                  </div>
+                  {loading ? (
+                    <ProfileSkeleton />
+                  ) : error ? (
+                    <div className="rounded-xl border border-red-500/25 bg-red-500/[0.07] px-4 py-3 text-[13px] text-red-200/95">
+                      {error}
+                      <button 
+                        onClick={() => window.location.reload()} 
+                        className="ml-4 text-aurum underline"
+                      >
+                        Retry
+                      </button>
+                    </div>
+                  ) : profile ? (
+                    <div className="relative grid gap-4 sm:grid-cols-2 sm:gap-5">
+                      <ProfileRow label="First name" value={profile.firstName} />
+                      <ProfileRow label="Last name" value={profile.lastName} />
+                      <ProfileRow label="Email address" value={profile.email} className="sm:col-span-2" />
+                      <ProfileRow label="Gender" value={profile.gender} />
+                      <ProfileRow label="Age" value={profile.age} />
+                      <ProfileRow label="Country" value={profile.country} className="sm:col-span-2" />
+                      <ProfileRow label="Residential address" value={profile.residentialAddress} multiline className="sm:col-span-2" />
+                    </div>
+                  ) : null}
                 </section>
               </div>
             </div>

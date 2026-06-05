@@ -9,6 +9,8 @@ import React, { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import HomeFooter from '../components/home/HomeFooter.jsx'
 import HomeHeader from '../components/home/HomeHeader.jsx'
+import axios from 'axios'
+
 
 const SESSION_KEY = 'eleven_user'
 /** DEMO ONLY — total gas fee in USD. BACKEND: may come from GET /api/wallet/withdraw/fees or in POST response */

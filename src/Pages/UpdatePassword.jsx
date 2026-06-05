@@ -9,6 +9,8 @@ import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import HomeFooter from '../components/home/HomeFooter.jsx'
 import HomeHeader from '../components/home/HomeHeader.jsx'
+import { getAccessToken, getCsrfToken } from '../api/auth.js'
+import axios from 'axios'
 
 const SETTINGS_NAV_LINKS = [{ to: '/settings', label: 'Settings' }]
 
@@ -17,6 +19,12 @@ const PLACEHOLDER_USER = { displayName: 'Client' }
 
 export default function UpdatePassword() {
   const navigate = useNavigate()
+  useEffect(() => {
+    if (!getAccessToken()) {
+      navigate('/login', { replace: true })
+    }
+  }, [navigate])
+
   const [user] = useState(PLACEHOLDER_USER)
 
   // --- Form state ---
@@ -35,49 +43,51 @@ export default function UpdatePassword() {
     navigate('/login', { replace: true })
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
     setSuccess('')
+    setLoading(true)  // Also missing loading state
 
-    // --- Validation ---
-    if (!newPassword || !confirmPassword) {
-      setError('Please fill in both password fields.')
-      return
-    }
-    if (newPassword !== confirmPassword) {
-      setError('Passwords do not match.')
-      return
-    }
-    if (newPassword.length < 8) {
-      setError('Password must be at least 8 characters.')
-      return
-    }
+    // Validation...
 
-    // --- Payload sent to backend (see BACKEND INTEGRATION below) ---
-    const updatePasswordPayload = {
-      newPassword,
-      confirmPassword,
-    }
+    try {
+      const token = getAccessToken()
+      if (!token) {
+        navigate('/login', { replace: true })
+        return
+      }
 
-    /*
-     * ┌─────────────────────────────────────────────────────────────────
-     * │ BACKEND INTEGRATION — Update Password Mutation
-     * ├─────────────────────────────────────────────────────────────────
-     * │ Trigger:  form submit (handleSubmit), after validation passes
-     * │ Input:    updatePasswordPayload  →  { newPassword, confirmPassword }
-     * │           (confirmPassword is frontend-only — do not send unless backend requires it)
-     * │
-     * │ Connect your backend password-update call here.
-     * │ Read stored tokens from src/api/auth.js (getAccessToken, getCsrfToken)
-     * │ if your backend requires them on the request.
-     * │
-     * │ On success: setSuccess('Password updated successfully')
-     * │             clear form fields (setNewPassword(''), setConfirmPassword(''))
-     * │ On error:   setError(message from backend)
-     * └─────────────────────────────────────────────────────────────────
-     */
+      const response = await axios.post(
+        'https://web3.elevenca.org/user_updatePassword',
+        { newPassword, confirmPassword },
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'x-csrf-token': getCsrfToken()
+          },
+          timeout: 15000
+        }
+      )
+
+      if (!response.data) {
+        throw new Error('Empty response from server')
+      }
+
+      setSuccess('Password updated successfully')
+      setNewPassword('')
+      setConfirmPassword('')
+    } catch (err) {
+      if (err.response?.status === 401) {
+        navigate('/login', { replace: true })
+        return
+      }
+      setError(err.response?.data?.message || err.message || 'Failed to update password')
+    } finally {
+      setLoading(false)
+    }
   }
+
 
   return (
     <div className="relative flex min-h-screen flex-col overflow-x-clip bg-ink">

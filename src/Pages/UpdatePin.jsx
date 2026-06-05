@@ -9,6 +9,8 @@ import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import HomeFooter from '../components/home/HomeFooter.jsx'
 import HomeHeader from '../components/home/HomeHeader.jsx'
+import { getAccessToken, getCsrfToken } from '../api/auth.js'
+import axios from 'axios'
 
 const SETTINGS_NAV_LINKS = [{ to: '/settings', label: 'Settings' }]
 
@@ -17,6 +19,12 @@ const PLACEHOLDER_USER = { displayName: 'Client' }
 
 export default function UpdatePin() {
   const navigate = useNavigate()
+  useEffect(() => {
+    if (!getAccessToken()) {
+      navigate('/login', { replace: true })
+    }
+  }, [navigate])
+
   const [user] = useState(PLACEHOLDER_USER)
 
   // --- Form state ---
@@ -35,7 +43,7 @@ export default function UpdatePin() {
     navigate('/login', { replace: true })
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
     setSuccess('')
@@ -60,6 +68,21 @@ export default function UpdatePin() {
       confirmPin,
     }
 
+    // ======= CALL
+    const token = getAccessToken()
+    const csrfToken = getCsrfToken()
+    const url = 'https://web3.elevenca.org/user_updatePIN'
+    const updatePass = await axios.post(url, updatePinPayload, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'x-csrf-token': `${csrfToken}`
+      }
+    })
+    if (!updatePass.data) {
+      throw new Error('Response Data Not Found')
+    }
+    setSuccess('PIN updated successfully')
+
     /*
      * ┌─────────────────────────────────────────────────────────────────
      * │ BACKEND INTEGRATION — Update PIN Mutation
@@ -72,8 +95,6 @@ export default function UpdatePin() {
      * │ Read stored tokens from src/api/auth.js (getAccessToken, getCsrfToken)
      * │ if your backend requires them on the request.
      * │
-     * │ On success: setSuccess('PIN updated successfully')
-     * │             clear form fields (setNewPin(''), setConfirmPin(''))
      * │ On error:   setError(message from backend)
      * └─────────────────────────────────────────────────────────────────
      */
