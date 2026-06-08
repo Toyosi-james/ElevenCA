@@ -12,9 +12,9 @@ import FlowChart from '../components/home/FlowChart.jsx'
 import TransactionHistory from '../components/home/TransactionHistory.jsx'
 import HomeFooter from '../components/home/HomeFooter.jsx'
 import HomeHeader from '../components/home/HomeHeader.jsx'
-import { getAccessToken, getCsrfToken } from '../api/auth.js'
+import { getAccessToken, clearTokens } from '../api/auth.js'
 import axios from 'axios'
-
+import { useEffect } from 'react'
 
 const TRANSACTION_PAGE_SIZE = 6
 
@@ -41,51 +41,128 @@ const PLACEHOLDER_TRANSACTIONS = [
   { id: 'tx-8', title: 'Custody fee', amount: -120, currency: 'USD', direction: 'out', status: 'completed', occurredAt: Date.now() - 28800000 },
 ]
 
+
+
+
 export default function Home() {
   const navigate = useNavigate()
-  // 
+
   useEffect(() => {
-  if (!getAccessToken()) {
-    navigate('/login', { replace: true })
-  }
-}, [navigate])
+    if (!getAccessToken()) {
+      navigate('/login', { replace: true })
+    }
+  }, [navigate])
 
   const [user] = useState(PLACEHOLDER_USER)
-  const [balance] = useState(PLACEHOLDER_BALANCE)
+  const [balance, setBalance] = useState(null)
+  const [balanceLoading, setBalanceLoading] = useState(false)
+
   const [chartRange, setChartRange] = useState('30d')
   const [txPage, setTxPage] = useState(1)
 
-  // Uncomment when wiring transaction history from backend:
-  // const [txItems, setTxItems] = useState([])
-  // const [txTotal, setTxTotal] = useState(0)
-  // const [txTotalPages, setTxTotalPages] = useState(1)
-  // const [txHasNextPage, setTxHasNextPage] = useState(false)
-  // const [txLoading, setTxLoading] = useState(false)
+  const [txItems, setTxItems] = useState([])
+  const [txTotal, setTxTotal] = useState(0)
+  const [txTotalPages, setTxTotalPages] = useState(1)
+  const [txHasNextPage, setTxHasNextPage] = useState(false)
+  const [txLoading, setTxLoading] = useState(false)
 
-  /*
-   * ┌─────────────────────────────────────────────────────────────────
-   * │ BACKEND INTEGRATION — Fetch Transaction History
-   * ├─────────────────────────────────────────────────────────────────
-   * │ File:     src/Pages/Home.jsx  (this file — NOT TransactionHistory.jsx)
-   * │ Trigger:  page mount AND whenever txPage changes (pagination)
-   * │
-   * │ Connect your backend transaction-list fetch here.
-   * │ Read stored tokens from src/api/auth.js (getAccessToken, getCsrfToken)
-   * │ if your backend requires them on the request.
-   * │
-   * │ Pass fetched data to <TransactionHistory /> props at bottom of this file:
-   * │   items={txItems}
-   * │   loading={txLoading}
-   * │   page={txPage}
-   * │   pageSize={TRANSACTION_PAGE_SIZE}
-   * │   total={txTotal}
-   * │   totalPages={txTotalPages}
-   * │   hasNextPage={txHasNextPage}
-   * │   onPageChange={setTxPage}
-   * │
-   * │ Remove PLACEHOLDER_TRANSACTIONS and txSlice useMemo when wired.
-   * └─────────────────────────────────────────────────────────────────
-   */
+  useEffect(() => {
+    const fetchBalance = async () => {
+      try {
+        setBalanceLoading(true)
+
+        const token = getAccessToken()
+
+        const response = await axios.get(
+          'https://api.elevenca.org/elevenCA/client_availableBalance',
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          }
+        )
+
+        console.log('Balance API:', response.data)
+
+      const data = response.data
+
+const mappedBalance = {
+  totalUsd: data.available_balance ?? 0,
+  change24hPct: 0,
+  currency: 'USD',
+}
+
+console.log("Mapped Balance:", mappedBalance)
+
+setBalance(mappedBalance)
+
+        setBalance(mappedBalance)
+      } catch (error) {
+        console.error('Balance Error:', error.response?.data || error.message)
+      } finally {
+        setBalanceLoading(false)
+      }
+    }
+
+    fetchBalance()
+  }, [])
+
+
+useEffect(() => {
+  const fetchTransactions = async () => {
+    try {
+      setTxLoading(true)
+
+      const token = getAccessToken()
+
+      const response = await axios.get(
+        'https://api.elevenca.org/elevenCA/transaction/history',
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      )
+
+      console.log('Transaction History:', response.data)
+
+const rawTransactions = response.data?.data || response.data || []
+
+const mappedTransactions = Array.isArray(rawTransactions)
+  ? rawTransactions.map(tx => ({
+      id: tx.id,
+      title: tx.description,          // backend → UI fix
+      amount: tx.amount,
+      currency: 'USD',                // backend does not provide it
+      direction: tx.direction,
+      status: tx.status,
+      occurredAt: tx.createdAt,       // backend → UI fix
+    }))
+  : []
+
+setTxItems(mappedTransactions)
+
+      const total = transactions.length
+
+      setTxTotal(total)
+
+      const totalPages = Math.max(
+        1,
+        Math.ceil(total / TRANSACTION_PAGE_SIZE)
+      )
+
+      setTxTotalPages(totalPages)
+
+      setTxHasNextPage(txPage < totalPages)
+    } catch (error) {
+      console.error('Transaction History Error:', error)
+    } finally {
+      setTxLoading(false)
+    }
+  }
+
+  fetchTransactions()
+}, [txPage])
 
   // Static UI placeholder — remove when backend chart data is wired
   const chartPoints = useMemo(() => {
@@ -95,23 +172,19 @@ export default function Home() {
   }, [chartRange])
 
   // Static UI placeholder — remove when backend pagination is wired
-  const txSlice = useMemo(() => {
-    const total = PLACEHOLDER_TRANSACTIONS.length
-    const start = (txPage - 1) * TRANSACTION_PAGE_SIZE
-    const items = PLACEHOLDER_TRANSACTIONS.slice(start, start + TRANSACTION_PAGE_SIZE)
-    const totalPages = Math.max(1, Math.ceil(total / TRANSACTION_PAGE_SIZE))
-    return { items, total, totalPages, hasNextPage: txPage < totalPages }
-  }, [txPage])
+  // const txSlice = useMemo(() => {
+  //   const total = PLACEHOLDER_TRANSACTIONS.length
+  //   const start = (txPage - 1) * TRANSACTION_PAGE_SIZE
+  //   const items = PLACEHOLDER_TRANSACTIONS.slice(start, start + TRANSACTION_PAGE_SIZE)
+  //   const totalPages = Math.max(1, Math.ceil(total / TRANSACTION_PAGE_SIZE))
+  //   return { items, total, totalPages, hasNextPage: txPage < totalPages }
+  // }, [txPage])
 
-  const onLogout = () => {
-    /*
-     * BACKEND INTEGRATION — Logout
-     * Optional: call backend logout endpoint here if required.
-     * Then clear stored tokens: import { clearTokens } from '../api/auth.js'
-     * clearTokens()
-     */
-    navigate('/login', { replace: true })
-  }
+ const onLogout = () => {
+  clearTokens()
+  sessionStorage.clear() // optional safety
+  navigate('/login', { replace: true })
+}
 
   /*
    * ┌─────────────────────────────────────────────────────────────────
@@ -138,6 +211,8 @@ export default function Home() {
    */
 
   return (
+
+    
     <div className="relative flex min-h-screen flex-col overflow-x-clip bg-ink">
       <div className="pointer-events-none absolute inset-0" aria-hidden>
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(201,171,122,0.1),transparent)]" />
@@ -149,8 +224,15 @@ export default function Home() {
         <HomeHeader displayName={user.displayName} avatarUrl={user.avatarUrl} onLogout={onLogout} />
 
         <main className="w-full flex-1 px-4 py-8 sm:px-6 sm:py-10 lg:px-10 xl:px-14">
-          <BalanceSection totalUsd={balance.totalUsd} change24hPct={balance.change24hPct} currency={balance.currency} />
-
+         {balanceLoading || !balance ? (
+  <p className="text-white">Loading balance...</p>
+) : (
+  <BalanceSection
+    totalUsd={balance.totalUsd}
+    change24hPct={balance.change24hPct}
+    currency={balance.currency}
+  />
+)}
           <div className="mt-10 sm:mt-12">
             <FlowChart points={chartPoints} range={chartRange} onRangeChange={setChartRange} />
           </div>
@@ -161,16 +243,16 @@ export default function Home() {
               Backend developer: wire transaction fetch in Home.jsx
               (search "BACKEND INTEGRATION — Fetch Transaction History").
             */}
-            <TransactionHistory
-              items={txSlice.items}
-              loading={false}
-              page={txPage}
-              pageSize={TRANSACTION_PAGE_SIZE}
-              total={txSlice.total}
-              totalPages={txSlice.totalPages}
-              hasNextPage={txSlice.hasNextPage}
-              onPageChange={setTxPage}
-            />
+           <TransactionHistory
+  items={txItems}
+  loading={txLoading}
+  page={txPage}
+  pageSize={TRANSACTION_PAGE_SIZE}
+  total={txTotal}
+  totalPages={txTotalPages}
+  hasNextPage={txHasNextPage}
+  onPageChange={setTxPage}
+/>
           </div>
         </main>
 

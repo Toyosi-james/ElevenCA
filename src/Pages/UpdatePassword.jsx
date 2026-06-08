@@ -9,8 +9,9 @@ import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import HomeFooter from '../components/home/HomeFooter.jsx'
 import HomeHeader from '../components/home/HomeHeader.jsx'
-import { getAccessToken, getCsrfToken } from '../api/auth.js'
+import { getAccessToken } from '../api/auth.js'
 import axios from 'axios'
+import { useEffect } from 'react'
 
 const SETTINGS_NAV_LINKS = [{ to: '/settings', label: 'Settings' }]
 
@@ -19,6 +20,10 @@ const PLACEHOLDER_USER = { displayName: 'Client' }
 
 export default function UpdatePassword() {
   const navigate = useNavigate()
+
+  const [loading, setLoading] = useState(false) // 👈 must be inside here
+
+
   useEffect(() => {
     if (!getAccessToken()) {
       navigate('/login', { replace: true })
@@ -57,14 +62,36 @@ export default function UpdatePassword() {
         navigate('/login', { replace: true })
         return
       }
+      
+
+  
+      if (!newPassword || !confirmPassword) {
+  setError('All fields are required')
+  setLoading(false)
+  return
+}
+
+if (newPassword !== confirmPassword) {
+  setError('Passwords do not match')
+  setLoading(false)
+  return
+}
+
+console.log("UPDATE PASSWORD PAYLOAD:", {
+  password: newPassword,
+  confirmPassword: confirmPassword,
+});
 
       const response = await axios.post(
-        'https://web3.elevenca.org/user_updatePassword',
-        { newPassword, confirmPassword },
+        'https://api.elevenca.org/elevenCA/user_updatePassword',
+      {
+  password: newPassword,
+  confirmPassword
+},
         {
           headers: {
             'Authorization': `Bearer ${token}`,
-            'x-csrf-token': getCsrfToken()
+      
           },
           timeout: 15000
         }

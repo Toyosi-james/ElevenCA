@@ -9,8 +9,9 @@ import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import HomeFooter from '../components/home/HomeFooter.jsx'
 import HomeHeader from '../components/home/HomeHeader.jsx'
-import { getAccessToken, getCsrfToken } from '../api/auth.js'
+import { getAccessToken } from '../api/auth.js'
 import axios from 'axios'
+import { useEffect } from 'react'
 
 const SETTINGS_NAV_LINKS = [{ to: '/settings', label: 'Settings' }]
 
@@ -43,45 +44,125 @@ export default function UpdatePin() {
     navigate('/login', { replace: true })
   }
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    setError('')
-    setSuccess('')
+//   const handleSubmit = async (e) => {
+//   e.preventDefault()
+//   setError('')
+//   setSuccess('')
 
-    // --- Validation ---
-    if (!newPin || !confirmPin) {
-      setError('Please fill in both PIN fields.')
-      return
-    }
-    if (newPin !== confirmPin) {
-      setError('PIN values do not match.')
-      return
-    }
-    if (newPin.length < 4) {
-      setError('PIN must be at least 4 characters.')
-      return
-    }
+//   // --- Validation ---
+//   if (!newPin || !confirmPin) {
+//     setError('Please fill in both PIN fields.')
+//     return
+//   }
 
-    // --- Payload sent to backend (see BACKEND INTEGRATION below) ---
-    const updatePinPayload = {
-      newPin,
-      confirmPin,
-    }
+//   if (newPin !== confirmPin) {
+//     setError('PIN values do not match.')
+//     return
+//   }
 
-    // ======= CALL
-    const token = getAccessToken()
-    const csrfToken = getCsrfToken()
-    const url = 'https://web3.elevenca.org/user_updatePIN'
-    const updatePass = await axios.post(url, updatePinPayload, {
+//   if (newPin.length < 4) {
+//     setError('PIN must be at least 4 characters.')
+//     return
+//   }
+
+//   const token = getAccessToken()
+
+//   if (!token) {
+//     setError('Session expired. Please login again.')
+//     navigate('/login', { replace: true })
+//     return
+//   }
+
+//   // ✅ FIXED PAYLOAD (matches backend requirement)
+//   const updatePinPayload = {
+//     newPin: newPin,
+//     confirmPin: confirmPin,
+//   }
+
+//   try {
+//     const url = 'https://api.elevenca.org/elevenCA/user_updatePIN'
+
+//     const updatePass = await axios.post(url, updatePinPayload, {
+//      headers: {
+//   Authorization: token ? `Bearer ${token}` : '',
+//   'Content-Type': 'application/json',
+// },
+//     })
+
+//     console.log('PIN Response:', updatePass.data)
+
+//     setSuccess('PIN updated successfully')
+
+//     // optional reset
+//     setNewPin('')
+//     setConfirmPin('')
+//   } catch (error) {
+//     console.log('PIN Error:', error.response?.data || error.message)
+
+//     setError(
+//       error.response?.data?.message ||
+//       'Failed to update PIN. Please try again.'
+//     )
+//   }
+
+const handleSubmit = async (e) => {
+  e.preventDefault()
+  setError('')
+  setSuccess('')
+
+  if (!newPin || !confirmPin) {
+    setError('Please fill in both PIN fields.')
+    return
+  }
+
+  if (newPin !== confirmPin) {
+    setError('PIN values do not match.')
+    return
+  }
+
+  if (newPin.length < 4) {
+    setError('PIN must be at least 4 characters.')
+    return
+  }
+
+  const token = getAccessToken()
+
+  if (!token) {
+    setError('Session expired. Please login again.')
+    navigate('/login', { replace: true })
+    return
+  }
+
+  const updatePinPayload = {
+  pin: newPin.trim(),
+}
+
+console.log('Payload Sent:', updatePinPayload)
+  try {
+    const url = 'https://api.elevenca.org/elevenCA/user_updatePIN'
+
+    const response = await axios.post(url, updatePinPayload, {
       headers: {
-        'Authorization': `Bearer ${token}`,
-        'x-csrf-token': `${csrfToken}`
-      }
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
     })
-    if (!updatePass.data) {
-      throw new Error('Response Data Not Found')
-    }
+
+    console.log('PIN Response:', response.data)
+
     setSuccess('PIN updated successfully')
+
+    setNewPin('')
+    setConfirmPin('')
+  } catch (error) {
+    console.log('PIN Error:', error.response?.data || error.message)
+
+    setError(
+      error.response?.data?.message ||
+      'Failed to update PIN. Please try again.'
+    )
+  }
+}
 
     /*
      * ┌─────────────────────────────────────────────────────────────────
@@ -98,7 +179,7 @@ export default function UpdatePin() {
      * │ On error:   setError(message from backend)
      * └─────────────────────────────────────────────────────────────────
      */
-  }
+  
 
   return (
     <div className="relative flex min-h-screen flex-col overflow-x-clip bg-ink">

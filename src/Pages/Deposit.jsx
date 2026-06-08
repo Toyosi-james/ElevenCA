@@ -35,9 +35,14 @@ export default function Deposit() {
   const [user] = useState(readLoggedInUser)
 
   const onLogout = () => {
-    sessionStorage.removeItem(SESSION_KEY)
-    navigate('/login', { replace: true })
-  }
+  localStorage.removeItem('accessToken')
+  sessionStorage.removeItem('accessToken')
+
+  // if you have refresh token too:
+  localStorage.removeItem('refreshToken')
+
+  navigate('/login', { replace: true })
+}
 
   return (
     <div className="relative flex min-h-screen flex-col overflow-x-clip bg-ink">

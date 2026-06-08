@@ -62,9 +62,9 @@ export function getAccessToken() {
  *
  * @returns {string | null}
  */
-export function getCsrfToken() {
-  return localStorage.getItem(CSRF_TOKEN_KEY)
-}
+// export function getCsrfToken() {
+//   return localStorage.getItem(CSRF_TOKEN_KEY)
+// }
 
 /**
  * Remove both tokens from localStorage.

@@ -153,16 +153,15 @@ const Login = () => {
 
     try {
       // ====
-       const url = 'https://web3.elevenca.org/client_login'
+       const url = 'https://api.elevenca.org/elevenCA/client_login'
       const loginUser = await axios.post(url, loginPayload, {headers: {
         'Content-Type': 'application/json'
       }})
       if(!loginUser.data){throw new Error('No Login Response Found')}
       
       saveTokens({
-        accessToken: loginUser.data.accessToken,
-        csrfToken: loginUser.data.csrfToken,
-      })
+  accessToken: loginUser.data.jwt_token,
+})
        
       // ====
        

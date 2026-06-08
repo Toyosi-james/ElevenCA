@@ -7,7 +7,7 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import HomeFooter from '../components/home/HomeFooter.jsx'
-import { getAccessToken, getCsrfToken, clearTokens } from '../api/auth.js'
+import { getAccessToken, clearTokens } from '../api/auth.js'
 import axios from 'axios'
 
 const IconChevronLeft = () => (
@@ -54,13 +54,13 @@ export default function Profile() {
       }
 
       try {
-        const csrfToken = getCsrfToken()
+      
         const response = await axios.get(
-          'https://web3.elevenca.org/elevenCA/client_profile',
+          'https://api.elevenca.org/elevenCA/client_profile',
           {
             headers: {
               'Authorization': `Bearer ${token}`,
-              'x-csrf-token': csrfToken
+              
             },
             timeout: 10000
           }
