@@ -9,6 +9,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import HomeFooter from '../components/home/HomeFooter.jsx'
 import HomeHeader from '../components/home/HomeHeader.jsx'
+import { getAccessToken } from '../api/auth.js'
 
 const SESSION_KEY = 'eleven_user'
 
