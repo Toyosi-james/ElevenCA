@@ -53,7 +53,7 @@ export default function Home() {
     }
   }, [navigate])
 
-  const [user] = useState(PLACEHOLDER_USER)
+  const [user, setUser] = useState(PLACEHOLDER_USER)
   const [balance, setBalance] = useState(null)
   const [balanceLoading, setBalanceLoading] = useState(false)
 
@@ -65,6 +65,41 @@ export default function Home() {
   const [txTotalPages, setTxTotalPages] = useState(1)
   const [txHasNextPage, setTxHasNextPage] = useState(false)
   const [txLoading, setTxLoading] = useState(false)
+
+
+  useEffect(() => {
+  const fetchProfile = async () => {
+    try {
+      const token = getAccessToken()
+
+      const response = await axios.get(
+        'https://api.elevenca.org/elevenCA/client_profile',
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      )
+
+      const profile = response.data?.data
+
+      if (profile) {
+        setUser({
+          displayName: `${profile.firstName || ''} ${profile.lastName || ''}`.trim(),
+          email: profile.email,
+          avatarUrl: null,
+        })
+      }
+    } catch (error) {
+      console.error(
+        'Profile Error:',
+        error.response?.data || error.message
+      )
+    }
+  }
+
+  fetchProfile()
+}, [])
 
   useEffect(() => {
     const fetchBalance = async () => {
