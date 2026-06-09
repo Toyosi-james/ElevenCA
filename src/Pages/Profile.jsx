@@ -66,11 +66,19 @@ export default function Profile() {
           }
         )
 
+        
+
         if (!response.data) {
           throw new Error('Empty response from server')
         }
 
-        setProfile(response.data)
+        console.log('Profile Status:', response.status)
+console.log('Profile Data:', response.data)
+console.log('Actual Profile Object:', response.data.data)
+
+setProfile(response.data.data)
+
+        setProfile(response.data.data)
       } catch (err) {
         console.error('Profile fetch failed:', err)
         
@@ -88,6 +96,8 @@ export default function Profile() {
 
     fetchProfile()
   }, [navigate])
+
+  
 
   const letter = profile?.firstName?.charAt(0).toUpperCase() || '?'
   const fullName = profile 
